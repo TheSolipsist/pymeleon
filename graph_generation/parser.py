@@ -1,5 +1,4 @@
 import networkx as nx
-from networkx.classes import graph
 
 class Parser:
     """
