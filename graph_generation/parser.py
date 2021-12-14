@@ -192,4 +192,3 @@ class Parser:
         brackets_list = parse_brackets_rec(expr_obj)
         return brackets_list
         
-
