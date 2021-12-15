@@ -26,15 +26,10 @@ class Parser:
         "^": "power"
     }
     
-    COMMUTATIVE_FUNCTIONS = [
-        SUPPORTED_OPERATORS["+"],
-        SUPPORTED_OPERATORS["*"]
-    ]
-
-    def __init__(self, expression, type_dict):
+    def __init__(self, expression, constraints):
         # In order to avoid any parsing errors with "**" and "*", exponentiation is represented by "^"
         self._expression = expression.replace(" ", "").replace("**", "^")
-        self._type_dict = type_dict
+        self._constraints = constraints
         self.variables_constants, self.functions = set(), set()
         self.graph = nx.DiGraph(name=self._expression)
         try:
@@ -58,27 +53,27 @@ class Parser:
 
         class Node(Parser._Wrapper):
             pass
-        
+            
         def generate_subgraph(root_node, arguments_list):
             arg_iter = enumerate(arguments_list)
             functions_found = 0
             for i, item in arg_iter:
                 item_node = Node(item)
-                self.graph.add_node(item_node, name=item)
-                if root_node.value in Parser.COMMUTATIVE_FUNCTIONS:
-                    self.graph.add_edge(item_node, root_node)
-                else:
-                    self.graph.add_edge(item_node, root_node, order=i - functions_found + 1)
-                if item in self.functions:
+                isfunction = item in self.functions
+                self.graph.add_node(item_node, name=item, isfunction=isfunction)
+                self.graph.add_edge(item_node, root_node, order=i - functions_found + 1)
+                if isfunction:
                     functions_found += 1
                     next(arg_iter)
                     generate_subgraph(item_node, arguments_list[i + 1])
 
         graph_list = self._parse_expression()
         root_node = Node(graph_list[0])
-        self.graph.add_node(root_node, name=root_node.value)
-        arguments_list = graph_list[1]
-        generate_subgraph(root_node, arguments_list)
+        isfunction = root_node.value in self.functions
+        self.graph.add_node(root_node, name=root_node.value, isfunction=isfunction)
+        if isfunction:
+            arguments_list = graph_list[1]
+            generate_subgraph(root_node, arguments_list)
 
     def _parse_expression(self):
         """

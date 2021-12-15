@@ -1,4 +1,4 @@
-from graph_generation.parser import Parser
+from language.parser import Parser
 from matplotlib import pyplot as plt
 import networkx as nx
 
