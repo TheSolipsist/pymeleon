@@ -61,19 +61,15 @@ class Parser:
                 item_node = Node(item)
                 isfunction = item in self.functions
                 self.graph.add_node(item_node, name=item, isfunction=isfunction)
-                self.graph.add_edge(item_node, root_node, order=i - functions_found + 1)
+                self.graph.add_edge(root_node, item_node, order=i - functions_found + 1)
                 if isfunction:
                     functions_found += 1
                     next(arg_iter)
                     generate_subgraph(item_node, arguments_list[i + 1])
 
         graph_list = self._parse_expression()
-        root_node = Node(graph_list[0])
-        isfunction = root_node.value in self.functions
-        self.graph.add_node(root_node, name=root_node.value, isfunction=isfunction)
-        if isfunction:
-            arguments_list = graph_list[1]
-            generate_subgraph(root_node, arguments_list)
+        self.graph.add_node("root", name="ROOT_NODE")
+        generate_subgraph("root", graph_list)
 
     def _parse_expression(self):
         """
