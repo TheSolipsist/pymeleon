@@ -29,7 +29,7 @@ class Parser:
     def __init__(self, expression, constraints):
         # In order to avoid any parsing errors with "**" and "*", exponentiation is represented by "^"
         self._expression = expression.replace(" ", "").replace("**", "^")
-        self._constraints = constraints
+        self.constraints = constraints
         self.variables_constants, self.functions = set(), set()
         self.graph = nx.DiGraph(name=self._expression)
         try:
@@ -68,7 +68,7 @@ class Parser:
                     generate_subgraph(item_node, arguments_list[i + 1])
 
         graph_list = self._parse_expression()
-        self.graph.add_node("root", name="ROOT_NODE")
+        self.graph.add_node("root", name="ROOT")
         generate_subgraph("root", graph_list)
 
     def _parse_expression(self):
