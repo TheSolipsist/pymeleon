@@ -34,7 +34,7 @@ class Rule:
         Apply the rule to the specified graph, returning the transformed graph
         """
         def apply_rec(root_node, root_node_check):
-            successors = list(graph.successors())
+            successors = list(graph.successors(root_node))
             successors_check = list(self._graph_in.successors(root_node_check))
             if root_node_check.value in self._funcs_in:
                 if root_node_check.value != root_node.value or len(successors) != len(successors_check):
