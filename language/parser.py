@@ -1,5 +1,18 @@
 import networkx as nx
 
+class Wrapper:
+    """
+    Wrapper around any Python object that holds a value
+    """
+    def __init__(self, value):
+        self.value = value
+
+class Node(Wrapper):
+    pass
+
+class Expression(Wrapper):
+    pass
+
 class Parser:
     """
     Parser for graph generation from Python expressions
@@ -38,21 +51,11 @@ class Parser:
             print("Inappropriate expression. Refer to the parser's requirements.")
     
     # --- Private methods and classes ---
-    
-    class _Wrapper:
-        """
-        Wrapper around any Python object that holds a value
-        """
-        def __init__(self, value):
-            self.value = value
         
     def _generate_graph(self):
         """
         Generates the expression's graph
         """
-
-        class Node(Parser._Wrapper):
-            pass
             
         def generate_subgraph(root_node, arguments_list):
             arg_iter = enumerate(arguments_list)
@@ -75,9 +78,6 @@ class Parser:
         """
         Parses the expression and returns a graph representation list
         """
-        
-        class Expression(Parser._Wrapper):
-           pass
         
         def disassemble_expression(expression):
             """
