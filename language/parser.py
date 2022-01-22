@@ -19,14 +19,13 @@ class Parser:
     
     -- Parameters --
         expression: String containing the Python expression
-        type_dict: Dictionary mapping expression variables to constraints (e.g. type)
+        constraints: Dictionary mapping expression variables to constraints (e.g. type)
     
     -- Attributes --
         graph: The generated networkx graph
         variables_constants: Set containing all variables and constants in the expression
         functions: Set containing all functions in the expression
     """
-
     # The following operators should be written in reverse order of execution hierarchy (e.g. + is higher than *)
     SUPPORTED_OPERATORS = {
         "-": "sub",
@@ -56,29 +55,32 @@ class Parser:
         """
         Generates the expression's graph
         """
-            
         def generate_subgraph(root_node, arguments_list):
             arg_iter = enumerate(arguments_list)
             functions_found = 0
             for i, item in arg_iter:
                 item_node = Node(item)
                 isfunction = item in self.functions
-                self.graph.add_node(item_node, name=item, isfunction=isfunction)
+                self.graph.add_node(item_node)
                 self.graph.add_edge(root_node, item_node, order=i - functions_found + 1)
                 if isfunction:
                     functions_found += 1
                     next(arg_iter)
                     generate_subgraph(item_node, arguments_list[i + 1])
 
-        graph_list = self._parse_expression()
-        self.graph.add_node("root", name="ROOT")
-        generate_subgraph("root", graph_list)
+        if self._expression:
+            graph_list = self._parse_expression()
+            self.graph.add_node("root_node")
+            generate_subgraph("root_node", graph_list)
+            for node in self.graph.successors("root_node"):
+                del self.graph.edges[("root_node", node)]["order"]
+        else:
+            print("WARNING: Empty expression parsed")
 
     def _parse_expression(self):
         """
         Parses the expression and returns a graph representation list
         """
-        
         def disassemble_expression(expression):
             """
             Populates the variables_constants and functions sets

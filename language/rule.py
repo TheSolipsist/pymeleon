@@ -2,6 +2,8 @@
 Rule module for pymeleon
 """
 from copy import deepcopy
+from language.parser import Node
+from collections import defaultdict
 
 class BadGraph(Exception):
     """
@@ -18,10 +20,8 @@ class Rule:
         parser_obj_out: the parser object representing the graph after the application of the rule
     
     -- Attributes --
-        node_map: dictionary mapping values from the generic input graph to the generic output graph
-                  (the set of values of all objects, including variables and functions in the input
-                  graph are the dict keys and the nodes in the output graph corresponding to these values
-                  are the dict values)
+        node_dict: dictionary mapping nodes from the generic input graph to the generic output graph (1-n)
+        reverse_node_dict: dictionary mapping nodes from the generic output graph to the generic input graph (1-1)
         
     -- Methods --
         apply(graph): applies the rule to the specified graph
@@ -43,46 +43,113 @@ class Rule:
         self._obj_out = parser_obj_out.variables_constants
         self._funcs_out= parser_obj_out.functions
 
-        self._create_node_map()
+        self._create_node_dict()
         
-    def _create_node_map(self):
-        node_map = dict()
+    def _create_node_dict(self):
+        node_dict = dict()
+        reverse_node_dict = dict()
+        graph_in_node_dict = dict()
+        # Python dictionaries are ordered since 3.7, so the first element will always be "root_node"
+        for node in tuple(self._graph_in.nodes)[1:]:
+            graph_in_node_dict[node.value] = node
         common_obj = self._obj_in & self._obj_out
-        unmatched_nodes = list(self._graph_out.nodes)
-        unmatched_nodes.remove("root")
+        unmatched_nodes = list(self._graph_out.nodes)[1:]
         for obj in common_obj:
             obj_nodes = []
             for node in unmatched_nodes:
                 if node.value == obj:
+                    reverse_node_dict[node] = graph_in_node_dict[obj]
                     obj_nodes.append(node)
-            node_map[obj] = tuple(obj_nodes)
+            node_dict[graph_in_node_dict[obj]] = list(obj_nodes)
             for node in obj_nodes:
                 unmatched_nodes.remove(node)
-        self.node_map = node_map
+        self.node_dict = node_dict
+        self.reverse_node_dict = reverse_node_dict
+        
+    def _remove_mapped_edges_rec(self, node):
+        import pdb;pdb.set_trace()
+        cur_transform_dict = self._cur_transform_dict
+        for successor_node in self._graph_in.successors(node):
+            self._cur_graph.remove_edge(cur_transform_dict[node], cur_transform_dict[successor_node])
+            self._remove_mapped_edges_rec(successor_node)
 
-    def apply(self, graph, transform_node_dict):
+    def _copy_output_node(self, node):
         """
-        Apply the rule to the specified graph, returning the transformed graph
+        Returns a copy of a node in the generic output graph with the value required for the application of the rule
+        """
+        reverse_node_dict = self.reverse_node_dict
+        if node in reverse_node_dict:
+            node_copy = Node(self._cur_transform_dict[reverse_node_dict[node]].value)
+            self._cur_node_dict[reverse_node_dict[node]].append(node_copy)
+        else:
+            node_copy = Node(node.value)
+        return node_copy
+
+    def _add_output_graph_rec(self, root_node, root_node_copy):
+        graph_out = self._graph_out
+        for node in graph_out.successors(root_node):
+            node_copy = self._copy_output_node(node)
+            self._cur_graph.add_edge(root_node_copy, node_copy, order=graph_out.edges[(root_node, node)])
+            self._add_output_graph_rec(node, node_copy)
+
+    def _add_output_graph(self):
+        """
+        Add a copy of the output graph to the currently under transformation graph and create the specific _cur_node_dict
+        """
+        self._cur_node_dict = defaultdict(list)
+        for node in self._graph_out.successors["root_node"]:
+            node_copy = self._copy_output_node(node)
+            self._add_output_graph_rec(node, node_copy)
+
+    def apply(self, graph, transform_node_dict, deepcopy_graph=True):
+        """
+        Apply the rule to the specified graph
 
         -- Arguments --
-            graph (networkx DiGraph): the graph to transformx
-            transform_node_map (dict): dictionary mapping each node.value from the generic input graph to the graph to be transformed
+            graph (networkx DiGraph): the graph to transform
+            transform_node_dict (dict): dictionary mapping each node from the generic input graph to the graph to be transformed
+            deepcopy_graph (bool): if True, the graph will be deepcopied before the transformation and returned after it
+                                   if False, the graph will be transformed in place
         
         -- Returns --
             transformed_graph (networkx DiGraph): the transformed graph
         """
-        node_map = self.node_map
-        for node_value in node_map:
-            for node in node_map[node_value]:
-                node.value = transform_node_dict[node_value]
-                self._graph_out.nodes[node]["name"] = node.value
-        transformed_graph = deepcopy(self._graph_out)
-        for node_value in node_map:
-            for node in node_map[node_value]:
-                node.value = node_value
-                self._graph_out.nodes[node]["name"] = node.value
-        return transformed_graph
+        if deepcopy_graph:
+            graph = deepcopy(graph)
+        self._cur_graph = graph
+        self._cur_transform_dict = transform_node_dict
+
+        # Remove the edges that make up the structure of the generic input graph
+        for in_node in self._graph_in.successors("root_node"):
+            self._remove_mapped_edges_rec(in_node)
+
+        self._add_output_graph()
+        cur_node_dict = self._cur_node_dict
+
+        reverse_transform_dict = dict((v, k) for k, v in transform_node_dict.items())
+        # Remove the nodes that were transformed and add between the new output nodes and the rest of the graph any edges that 
+        # existed between nodes that were transformed (and mapped to output nodes) and the rest of the graph
+        for graph_node in reverse_transform_dict:
+            if graph_node in cur_node_dict:
+                for pre_node in graph.predecessors(graph_node):
+                    if pre_node not in reverse_transform_dict:
+                        for node in cur_node_dict[graph_node]:
+                            graph.add_edge(pre_node, node)
+                for suc_node in graph.successors(graph_node):
+                    if suc_node not in reverse_transform_dict:
+                        for node in cur_node_dict[graph_node]:
+                            graph.add_edge(node, suc_node)
+                graph.remove_node(graph_node)
+            elif graph.out_degree(graph_node) == 0:
+                if graph.in_degree(graph_node) == 0:
+                    # Remove any nodes from the transformation dict that have total degree 0 and do not correspond to nodes in the
+                    # generic output graph
+                    graph.remove_node(graph_node)
+                else:
+                    graph.add_edge("root_node", graph_node)
         
+        if deepcopy_graph:
+            return graph
 
 class RuleSearch:
     pass
