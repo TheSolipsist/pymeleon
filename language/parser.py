@@ -72,8 +72,6 @@ class Parser:
             graph_list = self._parse_expression()
             self.graph.add_node("root_node")
             generate_subgraph("root_node", graph_list)
-            for node in self.graph.successors("root_node"):
-                del self.graph.edges[("root_node", node)]["order"]
         else:
             print("WARNING: Empty expression parsed")
 
