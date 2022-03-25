@@ -27,7 +27,7 @@ class Rule:
         apply(graph): applies the rule to the specified graph
     """
     
-    def __init__(self, parser_obj_in, parser_obj_out):
+    def __init__(self, parser_obj_in, parser_obj_out, other_node_dict=None):
         self._parser_obj_in = parser_obj_in
         self._parser_obj_out = parser_obj_out
         
@@ -40,12 +40,14 @@ class Rule:
         self._obj_out = parser_obj_out.variables_constants
         self._funcs_out= parser_obj_out.functions
 
-        self._create_node_dict()
+        self._create_node_dict(other_node_dict)
         
-    def _create_node_dict(self):
+    def _create_node_dict(self, other_node_dict):
         node_dict = dict()
         reverse_node_dict = dict()
         graph_in_node_dict = dict()
+        for node in other_node_dict:
+            node_dict[node] = other_node_dict[node]
         # Python dictionaries are ordered since 3.7, so the first element will always be "root_node"
         for node in tuple(self._graph_in.nodes)[1:]:
             graph_in_node_dict[node.value] = node
