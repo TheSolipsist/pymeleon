@@ -23,13 +23,13 @@ for val1, val2 in zip("abc", "xyz"):
     transform_node_dict[LHS_nodes[val1]] = apply_rule_nodes[val2]
 
 t1 = perf_counter()
-myrule.apply(to_apply_rule.graph, transform_node_dict, deepcopy_graph=False)
+transformed_graph = myrule.apply(to_apply_rule.graph, transform_node_dict)
 t2 = perf_counter()
 print(t2-t1)
 
-transformed_dg = to_apply_rule.graph
+old_graph = to_apply_rule.graph
 
-to_draw_dg = transformed_dg
+to_draw_dg = transformed_graph
 for node in to_draw_dg.nodes:
     if node != "root_node":
         to_draw_dg.nodes[node]["name"] = node.value
