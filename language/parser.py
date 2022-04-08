@@ -8,7 +8,11 @@ class Wrapper:
         self.value = value
 
 class Node(Wrapper):
-    pass
+    """
+    Node objects for usage in the graph
+    """
+    def copy(self):
+        return Node(self.value)
 
 class Expression(Wrapper):
     pass

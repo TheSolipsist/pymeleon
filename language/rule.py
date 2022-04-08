@@ -1,8 +1,8 @@
 """
 Rule module for pymeleon
 """
+from networkx import DiGraph
 from copy import deepcopy
-from language.parser import Node
 from collections import defaultdict
 
 class BadGraph(Exception):
@@ -42,7 +42,11 @@ class Rule:
         self._funcs_out= parser_obj_out.functions
 
         self._create_node_dict(other_node_dict, operator_dict)
-        
+    
+
+
+    # ------- PRIVATE FUNCTIONS START ------- #
+
     def _create_node_dict(self, other_node_dict, operator_dict):
         node_dict = dict()
         reverse_node_dict = dict()
@@ -69,11 +73,39 @@ class Rule:
         self.node_dict = node_dict
         self.reverse_node_dict = reverse_node_dict
     
-    def _copy_apply_graph(graph):
+    def _copy_apply_graph_rec(self, root_node, root_node_copy):
+        for node in self._cur_graph.successors(root_node):
+            node_copy = node.copy()
+            if node in self._cur_reverse_transform_dict:
+                input_node = self._cur_reverse_transform_dict[node]
+                self._cur_reverse_transform_dict_copy[node_copy] = input_node
+                self._cur_transform_dict_copy[input_node] = node_copy
+            self._cur_graph_copy.add_edge(root_node_copy, node_copy, order=self._cur_graph.get_edge_data(root_node, node)["order"])
+            self._copy_apply_graph_rec(node, node_copy)
+
+    def _copy_apply_graph(self, graph, reverse_transform_dict):
         """
-        Returns a deepcopy of the graph and the new transform_node_dict
+        Returns a deepcopy of the graph and the new transform_dict
         """
-        pass
+        graph_copy = DiGraph()
+        transform_dict_copy = dict()
+        reverse_transform_dict_copy = dict()
+        # The following variables are used to reduce recursion overhead (they would have to be used as arguments)
+        self._cur_graph = graph
+        self._cur_reverse_transform_dict = reverse_transform_dict
+        self._cur_graph_copy = graph_copy
+        self._cur_transform_dict_copy = transform_dict_copy
+        self._cur_reverse_transform_dict_copy = reverse_transform_dict_copy
+
+        graph_copy.add_node("root_node")
+        self._copy_apply_graph_rec("root_node", "root_node")
+
+        # Not deleting _cur_graph and _cur_reverse_transform_dict because they will be overwritten in apply()
+        del self._cur_graph_copy
+        del self._cur_transform_dict_copy
+        del self._cur_reverse_transform_dict_copy
+
+        return graph_copy, transform_dict_copy, reverse_transform_dict_copy
 
     def _remove_mapped_edges_rec(self, node):
         cur_transform_dict = self._cur_transform_dict
@@ -87,10 +119,10 @@ class Rule:
         """
         reverse_node_dict = self.reverse_node_dict
         if node in reverse_node_dict:
-            node_copy = Node(self._cur_transform_dict[reverse_node_dict[node]].value)
+            node_copy = self._cur_transform_dict[reverse_node_dict[node]].copy()
             self._cur_node_dict[reverse_node_dict[node]].append(node_copy)
         else:
-            node_copy = Node(node.value)
+            node_copy = node.copy()
         return node_copy
 
     def _add_output_graph_rec(self, root_node, root_node_copy):
@@ -111,24 +143,31 @@ class Rule:
                 self._cur_graph.add_edge("root_node", node_copy, order=-1)
             self._add_output_graph_rec(node, node_copy)
 
-    def apply(self, graph, transform_node_dict, deepcopy_graph=False):
+    # ------- PRIVATE FUNCTIONS END ------- #
+
+
+
+    def apply(self, graph, transform_dict, deepcopy_graph=True):
         """
         Apply the rule to the specified graph
 
         -- Arguments --
             graph (networkx DiGraph): the graph to transform
-            transform_node_dict (dict): dictionary mapping each node in the generic input graph to each node in the graph to be transformed
-            deepcopy_graph (bool): if True, the graph will be deepcopied before the transformation and returned after it
-                                   if False, the graph will be transformed in place
+            transform_dict (dict): dictionary mapping each node in the generic input graph to each node in the graph to be transformed
+            deepcopy_graph (bool): Specifies whether the graph will be deepcopied and returned or transformed in place
         
         -- Returns --
             transformed_graph (networkx DiGraph): the transformed graph
         """
-        reverse_transform_dict = dict((v, k) for k, v in transform_node_dict.items())
+        
+        reverse_transform_dict = dict((v, k) for k, v in transform_dict.items())
+
         if deepcopy_graph:
-            graph, transform_node_dict = self._copy_apply_graph(graph)
+            graph, transform_dict, reverse_transform_dict = self._copy_apply_graph(graph, reverse_transform_dict)
+
         self._cur_graph = graph
-        self._cur_transform_dict = transform_node_dict
+        self._cur_transform_dict = transform_dict
+        self._cur_reverse_transform_dict = reverse_transform_dict
 
         # Remove the edges that make up the structure of the generic input graph
         for in_node in self._graph_in.successors("root_node"):
@@ -165,6 +204,11 @@ class Rule:
                         # Remove any nodes from the transformation dict that have total degree 0 (or are connected to the root node and 
                         # have out_degree == 0) and do not correspond to nodes in the generic output graph
                         graph.remove_node(graph_node)
+
+        del self._cur_graph
+        del self._cur_transform_dict
+        del self._cur_reverse_transform_dict
+        del self._cur_node_dict
 
         if deepcopy_graph:
             return graph
