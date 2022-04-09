@@ -1,8 +1,7 @@
 """
-Rule module for pymeleon
+Rule module
 """
 from networkx import DiGraph
-from copy import deepcopy
 from collections import defaultdict
 
 class BadGraph(Exception):
@@ -174,6 +173,7 @@ class Rule:
             self._remove_mapped_edges_rec(in_node)
 
         self._add_output_graph()
+        # cur_node_dict is the equivalent of node_dict for the specific input and output graphs of the graph to transform
         cur_node_dict = self._cur_node_dict
 
         # Remove the nodes that were transformed and add between the new output nodes and the rest of the graph any edges that
@@ -212,6 +212,3 @@ class Rule:
 
         if deepcopy_graph:
             return graph
-
-class RuleSearch:
-    pass
