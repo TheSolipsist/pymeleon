@@ -21,7 +21,7 @@ class RuleSearch:
     
     def search_generator(self, rule, graph):
         """
-        Return a generator that yields subgraphs that match a rule's input graph from a given graph
+        Return a generator yielding subgraphs that match a rule's input graph from a given graph
 
         -- Arguments --
             rule (pymeleon Rule): The rule for which to find subgraphs matching the input graph
