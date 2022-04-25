@@ -6,6 +6,8 @@ class RuleSearch:
     """
     Rule search object for graph transformation
     
+    RuleSearch objects are callable and return a generator, yielding subgraphs that match a rule's input graph
+    
     -- Parameters --
         pass
         
@@ -13,13 +15,13 @@ class RuleSearch:
         pass
         
     -- Methods --
-        search_generator(rule, graph): returns a generator, yielding subgraphs that match a rule's input graph
+        pass 
     """
     
     def __init__(self):
         pass
     
-    def search_generator(self, rule, graph):
+    def __call__(self, rule, graph):
         """
         Return a generator yielding subgraphs that match a rule's input graph from a given graph
 
