@@ -133,7 +133,7 @@ class Rule:
 
     def _add_output_graph(self):
         """
-        Add a copy of the output graph to the currently under transformation graph and create the specific _cur_node_dict
+        Adds a copy of the output graph to the currently under transformation graph and create the specific _cur_node_dict
         """
         self._cur_node_dict = defaultdict(list)
         for node in self._graph_out.successors("root_node"):
@@ -148,7 +148,7 @@ class Rule:
 
     def apply(self, graph, transform_dict, deepcopy_graph=True):
         """
-        Apply the rule to the specified graph
+        Applies the rule to the specified graph
 
         -- Arguments --
             graph (networkx DiGraph): the graph to transform
