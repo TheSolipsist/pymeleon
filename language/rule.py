@@ -152,7 +152,7 @@ class Rule:
 
         -- Arguments --
             graph (networkx DiGraph): the graph to transform
-            transform_dict (dict): dictionary mapping each node in the generic input graph to each node in the graph to be transformed
+            transform_dict (dict): dictionary mapping each node in the generic input graph to a node in the graph to be transformed
             deepcopy_graph (bool): Specifies whether the graph will be deepcopied and returned or transformed in place
         
         -- Returns --
