@@ -4,7 +4,7 @@ class Wrapper:
     """
     Wrapper around any Python object that holds a value
     """
-    def __init__(self, value):
+    def __init__(self, value) -> None:
         self.value = value
 
 class Node(Wrapper):
@@ -42,7 +42,7 @@ class Parser:
         "^": "power"
     }
     
-    def __init__(self, expression, constraints):
+    def __init__(self, expression, constraints) -> None:
         # In order to avoid any parsing errors with "**" and "*", exponentiation is represented by "^"
         self._expression = expression.replace(" ", "").replace("**", "^")
         self.constraints = constraints

@@ -27,7 +27,7 @@ class Rule:
         apply(graph): applies the rule to the specified graph
     """
     
-    def __init__(self, parser_obj_in, parser_obj_out, other_node_dict=None, operator_dict=None):
+    def __init__(self, parser_obj_in, parser_obj_out, other_node_dict=None, operator_dict=None) -> None:
         self._parser_obj_in = parser_obj_in
         self._parser_obj_out = parser_obj_out
         
@@ -41,6 +41,7 @@ class Rule:
         self._funcs_out= parser_obj_out.functions
 
         self._create_node_dict(other_node_dict, operator_dict)
+        self._map_nodes_to_constraints_from_values()
     
 
 
@@ -72,6 +73,18 @@ class Rule:
         self.node_dict = node_dict
         self.reverse_node_dict = reverse_node_dict
     
+    def _map_nodes_to_constraints_from_values(self):
+        """
+        Changes the constraints dict so that it maps nodes rather than variable names (node.value) to boolean functions
+        Assumes that each variable (node.value) appears only once in each expression
+        Example: {"a": lambda x: isinstance(x, int)} -> {node_a: lambda x: isinstance(x, int)}
+        """
+        constraints = self._constraints
+        for node in tuple(self._graph_in.nodes)[1:]: # Skipping "root_node"
+            if node not in constraints and node.value in constraints:
+                constraints[node] = constraints[node.value] # Assuming each node.value only appears once
+                del constraints[node.value]
+
     def _copy_apply_graph_rec(self, root_node, root_node_copy):
         for node in self._cur_graph.successors(root_node):
             node_copy = node.copy()
@@ -198,12 +211,7 @@ class Rule:
                             graph.add_edge(node, suc_node, order=graph.get_edge_data(graph_node, suc_node)["order"])
                 graph.remove_node(graph_node)
             else:
-                # Fix this part
-                if graph.out_degree(graph_node) == 0:
-                    if graph.in_degree(graph_node) == 0 or "root_node" in graph.predecessors(graph_node):
-                        # Remove any nodes from the transformation dict that have total degree 0 (or are connected to the root node and 
-                        # have out_degree == 0) and do not correspond to nodes in the generic output graph
-                        graph.remove_node(graph_node)
+                graph.remove_node(graph_node)
 
         del self._cur_graph
         del self._cur_transform_dict

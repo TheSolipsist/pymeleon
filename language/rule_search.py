@@ -2,7 +2,7 @@
 Rule search module
 """
 # TODO: Come up with and implement way of using edges with order -1
-
+#       Remove root_node and instead use a list of all starting nodes
 from itertools import product, chain
 
 class RuleSearch:
@@ -10,18 +10,9 @@ class RuleSearch:
     Rule search object for graph transformation
     
     RuleSearch objects are callable and return a generator, yielding subgraphs that match a rule's input graph
-    
-    -- Parameters --
-        pass
-        
-    -- Attributes --
-        pass
-        
-    -- Methods --
-        pass 
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def __call__(self, rule, target_graph):
@@ -69,7 +60,7 @@ class RuleSearch:
         and its constraints in the target_graph
         """
         matching_subgraphs = []
-        for node in self._cur_target_graph:
+        for node in tuple(self._cur_target_graph)[1:]:
             if self._check_node_subgraph(self._cur_root_input_node, node):
                 matching_subgraphs.append(self._cur_transform_dict)
         return matching_subgraphs
@@ -91,7 +82,7 @@ class RuleSearch:
         del self._cur_input_graph
         del self._cur_constraints
         del self._cur_target_graph
-        # For all combinations of transform_dicts in the connected sugraphs that do not have any overlaps in their chosen
+        # For all combinations of transform_dicts in the connected subgraphs that do not have any overlaps in their chosen
         # nodes, combine the transform_dicts in a single transform_dict and yield it
         for transform_dict_combination in product(*connected_subgraphs):
             nodes = tuple(chain.from_iterable([transform_dict.values() for transform_dict in transform_dict_combination]))
