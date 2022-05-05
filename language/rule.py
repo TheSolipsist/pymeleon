@@ -34,24 +34,22 @@ class Rule:
         self._graph_in = parser_obj_in.graph
         self._obj_in = parser_obj_in.variables_constants
         self._funcs_in = parser_obj_in.functions
-        self._constraints = parser_obj_in.constraints
         
         self._graph_out = parser_obj_out.graph
         self._obj_out = parser_obj_out.variables_constants
         self._funcs_out= parser_obj_out.functions
 
         self._create_node_dict(other_node_dict, operator_dict)
-        self._map_nodes_to_constraints_from_values()
-    
+                
 
 
-    # ------- PRIVATE FUNCTIONS START ------- #
+    # ------- PRIVATE METHODS START ------- #
 
     def _create_node_dict(self, other_node_dict, operator_dict):
         node_dict = dict()
         reverse_node_dict = dict()
         graph_in_node_dict = dict()
-        if other_node_dict:
+        if other_node_dict is not None:
             for node in other_node_dict:
                 node_dict[node] = other_node_dict[node]
                 for output_node in other_node_dict[node]:
@@ -72,18 +70,6 @@ class Rule:
                 unmatched_nodes.remove(node)
         self.node_dict = node_dict
         self.reverse_node_dict = reverse_node_dict
-    
-    def _map_nodes_to_constraints_from_values(self):
-        """
-        Changes the constraints dict so that it maps nodes rather than variable names (node.value) to boolean functions
-        Assumes that each variable (node.value) appears only once in each expression
-        Example: {"a": lambda x: isinstance(x, int)} -> {node_a: lambda x: isinstance(x, int)}
-        """
-        constraints = self._constraints
-        for node in tuple(self._graph_in.nodes)[1:]: # Skipping "root_node"
-            if node not in constraints and node.value in constraints:
-                constraints[node] = constraints[node.value] # Assuming each node.value only appears once
-                del constraints[node.value]
 
     def _copy_apply_graph_rec(self, root_node, root_node_copy):
         for node in self._cur_graph.successors(root_node):
@@ -130,9 +116,10 @@ class Rule:
         Returns a copy of a node in the generic output graph with the value required for the application of the rule
         """
         reverse_node_dict = self.reverse_node_dict
+        cur_transform_dict = self._cur_transform_dict
         if node in reverse_node_dict:
-            node_copy = self._cur_transform_dict[reverse_node_dict[node]].copy()
-            self._cur_node_dict[reverse_node_dict[node]].append(node_copy)
+            node_copy = cur_transform_dict[reverse_node_dict[node]].copy()
+            self._cur_node_dict[cur_transform_dict[reverse_node_dict[node]]].append(node_copy)
         else:
             node_copy = node.copy()
         return node_copy
@@ -155,7 +142,7 @@ class Rule:
                 self._cur_graph.add_edge("root_node", node_copy, order=-1)
             self._add_output_graph_rec(node, node_copy)
 
-    # ------- PRIVATE FUNCTIONS END ------- #
+    # ------- PRIVATE METHODS END ------- #
 
 
 
@@ -172,7 +159,7 @@ class Rule:
             transformed_graph (networkx DiGraph): the transformed graph
         """
         
-        reverse_transform_dict = dict((v, k) for k, v in transform_dict.items())
+        reverse_transform_dict = {v: k for k, v in transform_dict.items()}
 
         if deepcopy_graph:
             graph, transform_dict, reverse_transform_dict = self._copy_apply_graph(graph, reverse_transform_dict)
@@ -209,9 +196,8 @@ class Rule:
                     if suc_node not in reverse_transform_dict:
                         for node in cur_node_dict[graph_node]:
                             graph.add_edge(node, suc_node, order=graph.get_edge_data(graph_node, suc_node)["order"])
-                graph.remove_node(graph_node)
-            else:
-                graph.remove_node(graph_node)
+        for graph_node in reverse_transform_dict:
+            graph.remove_node(graph_node)
 
         del self._cur_graph
         del self._cur_transform_dict

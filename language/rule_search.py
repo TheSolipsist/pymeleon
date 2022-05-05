@@ -29,9 +29,9 @@ class RuleSearch:
         return self._find_subgraphs(rule, target_graph)
 
     def _check_node_subgraph_rec(self, node_input_graph, node):
-        if (not self._cur_constraints[node_input_graph](node.value) 
-            or self._cur_input_graph.out_degree(node_input_graph) != self._cur_target_graph.out_degree(node)):
-            return False
+        for constraint in node_input_graph.constraints:
+            if constraint not in node.constraints:
+                return False
         self._cur_transform_dict[node_input_graph] = node
         for suc_input_node in self._cur_input_graph.successors(node_input_graph):
             order = self._cur_input_graph[node_input_graph][suc_input_node]["order"]
@@ -72,7 +72,6 @@ class RuleSearch:
         Should only be called by __call__
         """
         self._cur_input_graph = rule._graph_in
-        self._cur_constraints = rule._constraints
         self._cur_target_graph = target_graph
         connected_subgraphs = []
         for node in self._cur_input_graph.successors("root_node"):
@@ -80,7 +79,6 @@ class RuleSearch:
             self._cur_root_input_node = node
             connected_subgraphs.append(self._find_connected_matching_subgraphs())
         del self._cur_input_graph
-        del self._cur_constraints
         del self._cur_target_graph
         # For all combinations of transform_dicts in the connected subgraphs that do not have any overlaps in their chosen
         # nodes, combine the transform_dicts in a single transform_dict and yield it

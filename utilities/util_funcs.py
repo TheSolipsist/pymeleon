@@ -1,5 +1,7 @@
 from time import perf_counter
 import functools
+import networkx as nx
+from matplotlib import pyplot as plt
 
 def timer(func):
     """
@@ -17,3 +19,19 @@ def timer(func):
         total_time = end - start
         return (func_val, total_time)
     return wrapper
+
+def save_graph(graph, filename="temp_graph.png", print=False):
+    pos = nx.planar_layout(graph)
+    nx.draw(graph, pos, node_size=400)
+    for node in graph.nodes:
+        if node == "root_node":
+            nx.set_node_attributes(graph, {node: "root_node"}, "name")
+        else:
+            nx.set_node_attributes(graph, {node: node.value}, "name")
+    nx.draw_networkx_labels(graph, pos, labels=nx.get_node_attributes(graph, "name"), font_size=7)
+    nx.draw_networkx_edge_labels(graph, pos, edge_labels=nx.get_edge_attributes(graph, "order"), font_size=7)
+    if print:
+        plt.show()
+    else:
+        plt.savefig(filename, dpi=600)
+    plt.close()

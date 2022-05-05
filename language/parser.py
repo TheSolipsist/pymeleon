@@ -10,11 +10,27 @@ class Wrapper:
 class Node(Wrapper):
     """
     Node objects for usage in the graph
+    
+    -- Parameters --
+        value: The node's value
+        constraints: List of constraints that the node satisfies
     """
+    def __init__(self, value, constraints=None) -> None:
+        if constraints is None:
+            constraints = set()
+        self.value = value
+        self.constraints = constraints
+        
     def copy(self):
-        return Node(self.value)
+        """
+        Returns a shallow copy of the Node object
+        """
+        return Node(self.value, constraints=self.constraints)
 
 class Expression(Wrapper):
+    pass
+
+class ParsingError(Exception):
     pass
 
 class Parser:
@@ -30,60 +46,90 @@ class Parser:
         variables_constants: Set containing all variables and constants in the expression
         functions: Set containing all functions in the expression
     """
+     
     # The following operators should be written in reverse order of execution hierarchy (e.g. + is higher than *)
     SUPPORTED_OPERATORS = {
-        "-": "sub",
-        "+": "add",
-        "@": "matmul",
-        "%": "mod",
-        "//": "floordiv",
-        "*": "mul",
-        "/": "truediv",
-        "^": "power"
+        "-":    "__pymeleon_sub",
+        "+":    "__pymeleon_add",
+        "@":    "__pymeleon_matmul",
+        "%":    "__pymeleon_mod",
+        "//":   "__pymeleon_floordiv",
+        "*":    "__pymeleon_mul",
+        "/":    "__pymeleon_truediv",
+        "^":    "__pymeleon_power",
     }
+    SUPPORTED_OPERATORS_REVERSE = {v: k for k, v in SUPPORTED_OPERATORS.items()}
     
-    def __init__(self, expression, constraints) -> None:
-        # In order to avoid any parsing errors with "**" and "*", exponentiation is represented by "^"
-        self._expression = expression.replace(" ", "").replace("**", "^")
-        self.constraints = constraints
-        self.variables_constants, self.functions = set(), set()
-        self.graph = nx.DiGraph(name=self._expression)
-        try:
-            self._generate_graph()
-        except ValueError:
-            print("Inappropriate expression. Refer to the parser's requirements.")
+    def __init__(self, *args, mode=None, constraints=None) -> None:
+        self.functions, self.variables_constants = set(), set()
+        if mode == "RULE":
+            # In order to avoid any parsing errors with "**" and "*", exponentiation is represented by "^"
+            self._args = args
+            component_graphs = []
+            for expression in args:
+                expression = expression.replace(" ", "").replace("**", "^")
+                try:
+                    graph, functions, variables_constants = self._generate_graph(expression)
+                    self.functions |= functions
+                    self.variables_constants |= variables_constants
+                    component_graphs.append(graph)
+                except ValueError:
+                    print("Inappropriate expression. Refer to the parser's requirements.")
+            self.graph = nx.compose_all(component_graphs)
+                
+        elif mode == "PYMLIZ":
+            self.graph = self._generate_graph_simple(args)
+        else:
+            raise ParsingError
+        if constraints is None:
+            self.constraints = dict()
+        else:
+            self.constraints = self._fix_constraints(constraints)
+            self._add_constraints_to_nodes(self.graph, self.constraints)
+
+
     
-    # --- Private methods and classes ---
+    # --- PRIVATE METHODS START ---
+                
+    def _generate_graph_simple(self, args):
+        """
+        Generates the graph when a series of arbitrary objects is given
+        """
+        graph = nx.DiGraph()
+        graph.add_node("root_node")
+        for i, item in enumerate(args):
+            graph.add_edge("root_node", Node(item), order=i+1)
+        return graph
         
-    def _generate_graph(self):
+    def _generate_graph(self, expression):
         """
-        Generates the expression's graph
+        Generates and returns an expression's graph, functions and variables_constants
         """
-        def generate_subgraph(root_node, arguments_list):
+        def generate_subgraph(root_node, arguments_list, functions):
             arg_iter = enumerate(arguments_list)
             functions_found = 0
             for i, item in arg_iter:
                 item_node = Node(item)
-                isfunction = item in self.functions
-                self.graph.add_node(item_node)
-                self.graph.add_edge(root_node, item_node, order=i - functions_found + 1)
+                isfunction = item in functions
+                graph.add_node(item_node)
+                graph.add_edge(root_node, item_node, order=i - functions_found + 1)
                 if isfunction:
                     functions_found += 1
                     next(arg_iter)
-                    generate_subgraph(item_node, arguments_list[i + 1])
+                    generate_subgraph(item_node, arguments_list[i + 1], functions)
 
-        if self._expression:
-            graph_list = self._parse_expression()
-            self.graph.add_node("root_node")
-            generate_subgraph("root_node", graph_list)
-        else:
-            print("WARNING: Empty expression parsed")
-
-    def _parse_expression(self):
+        graph = nx.DiGraph()
+        functions, variables_constants = set(), set()
+        graph_list, functions, variables_constants = self._parse_expression(expression, functions, variables_constants)
+        graph.add_node("root_node")
+        generate_subgraph("root_node", graph_list, functions)
+        return graph, functions, variables_constants
+                    
+    def _parse_expression(self, expression, functions, variables_constants):
         """
         Parses the expression and returns a graph representation list
         """
-        def disassemble_expression(expression):
+        def disassemble_expression(expression, functions, variables_constants):
             """
             Populates the variables_constants and functions sets
             """
@@ -96,12 +142,12 @@ class Parser:
                     # Last item in split_item doesn't have a left bracket on its right, so it is not a function
                     for func in split_item[:-1]:
                         if func:
-                            self.functions.add(func)
+                            functions.add(func)
                     # Hopefully there are no naked operators or commas after a left bracket, so, since the last item
                     # is not a function, it must be a variable or a constant
-                    self.variables_constants.add(split_item[-1])
+                    variables_constants.add(split_item[-1])
                 else:
-                    self.variables_constants.add(item)
+                    variables_constants.add(item)
         
         def operators_to_functions(expr_obj):
             """
@@ -180,9 +226,30 @@ class Parser:
                     bracket_contents.append(expr_obj.value)
             return bracket_contents
         
-        expr_obj = Expression(self._expression)
+        expr_obj = Expression(expression)
         operators_to_functions(expr_obj)
-        disassemble_expression(expr_obj.value)
+        disassemble_expression(expr_obj.value, functions, variables_constants)
         brackets_list = parse_brackets_rec(expr_obj)
-        return brackets_list
-        
+        return brackets_list, functions, variables_constants
+
+    def _fix_constraints(self, constraints):
+        """
+        Returns a fixed constraints dict (each value should be an iterable yielding constraint types)
+        """
+        for node_value in constraints:
+            node_constraints = constraints[node_value]
+            if not isinstance(node_constraints, (list, tuple, set)):
+                constraints[node_value] = (node_constraints,)
+        return constraints
+    
+    def _add_constraints_to_nodes(self, graph, constraints):
+        """
+        Adds any constraints from the constraints dicts to their corresponding nodes
+        Example: {"a": "isint"} -> node_a.constraints == set(..., "isint")
+        """
+        for node in tuple(graph.nodes)[1:]: # Skipping "root_node"
+            if node.value in constraints:
+                for constraint in constraints[node.value]:
+                    node.constraints.add(constraint)
+                    
+    # --- PRIVATE METHODS END ---

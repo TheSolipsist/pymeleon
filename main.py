@@ -3,40 +3,31 @@ from matplotlib import pyplot as plt
 from language.rule import Rule
 from object.object import PymLiz
 import networkx as nx
-import config
 from time import perf_counter
+import numpy as np
+from utilities.util_funcs import save_graph
 
-expression_LHS = "a + b + c"
-constraints_LHS = {"a": lambda x: isinstance(x, int),
-                   "b": lambda x: isinstance(x, int),
-                   "c": lambda x: isinstance(x, float),
-                   "add": lambda x: x == "add"}
-LHS_obj = Parser(expression_LHS, constraints_LHS)
-RHS_obj = Parser("a * b", {})
+constraint_types = {"islist": lambda x: isinstance(x, list),
+                    "isnparray": lambda x: isinstance(x, np.ndarray)}
+convert_to_nparr = Rule(Parser("a", constraints={"a": "islist"}, mode="RULE"),
+                       Parser("np.array(a)", constraints={"np.array": "isnparray"}, mode="RULE"))
 
-Rule_Add2Int1Float_To_Mul2 = Rule(LHS_obj, RHS_obj)
+dot_product = Rule(Parser("a", "b", constraints={"a": "isnparray", "b": "isnparray"}, mode="RULE"),
+                   Parser("np.sum(a*b)", constraints={"np.sum": "isnparray"}, mode="RULE"))
+    
+list1 = [1, 2, 3]
+list2 = [2, 2, 2]
+obj1 = PymLiz(Parser(list1, list2, mode="PYMLIZ"), constraint_types=constraint_types, modules_to_import={"numpy": "np"})
 
-n1 = 1
-n2 = 23
-n3 = 1.4
-n4 = "SomeNode"
+print(f"view 1: {obj1.view()}")
+save_graph(obj1._graph, print=True)
 
-config.locals = locals()
-config.globals = globals()
-obj1 = PymLiz(Parser("foo(n1 + n2 + n3, n2 + n1 + n3, n4)", {}))
-for i, transform_dict in enumerate(obj1.search(Rule_Add2Int1Float_To_Mul2)):
-    transformed_graph = obj1.apply(Rule_Add2Int1Float_To_Mul2, transform_dict)
+for transform_dict in obj1.search(convert_to_nparr):
+    obj1.apply(convert_to_nparr, transform_dict, inplace=True)
+    save_graph(obj1._graph, print=True)
+    print(f"view 2: {obj1.view()}")
+for transform_dict in obj1.search(dot_product):
+    obj1.apply(dot_product, transform_dict, inplace=True)
+    save_graph(obj1._graph, print=True)
+    print(f"view 3: {obj1.view()}")
 
-    to_draw_dg = transformed_graph
-    for node in to_draw_dg.nodes:
-        if node != "root_node":
-            to_draw_dg.nodes[node]["name"] = node.value
-        else:
-            to_draw_dg.nodes[node]["name"] = "root"
-    pos = nx.planar_layout(to_draw_dg)
-    nx.draw(to_draw_dg, pos, node_size=400)
-    nx.draw_networkx_labels(to_draw_dg, pos, labels=nx.get_node_attributes(to_draw_dg, "name"), font_size=7)
-    nx.draw_networkx_edge_labels(to_draw_dg, pos, edge_labels=nx.get_edge_attributes(to_draw_dg, "order"), font_size=7)
-    # plt.show()
-    plt.savefig(f"graph{i}.png", dpi=600)
-    plt.close()
