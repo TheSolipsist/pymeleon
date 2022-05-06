@@ -118,8 +118,9 @@ class Rule:
         reverse_node_dict = self.reverse_node_dict
         cur_transform_dict = self._cur_transform_dict
         if node in reverse_node_dict:
-            node_copy = cur_transform_dict[reverse_node_dict[node]].copy()
-            self._cur_node_dict[cur_transform_dict[reverse_node_dict[node]]].append(node_copy)
+            node_to_copy = cur_transform_dict[reverse_node_dict[node]]
+            node_copy = node_to_copy.copy()
+            self._cur_node_dict[node_to_copy].append(node_copy)
         else:
             node_copy = node.copy()
         return node_copy
@@ -170,6 +171,7 @@ class Rule:
 
         # Remove the edges that make up the structure of the generic input graph
         for in_node in self._graph_in.successors("root_node"):
+            graph.remove_edge("root_node", transform_dict[in_node])
             self._remove_mapped_edges_rec(in_node)
 
         self._add_output_graph()
@@ -178,27 +180,26 @@ class Rule:
 
         # Remove the nodes that were transformed and add between the new output nodes and the rest of the graph any edges that
         # existed between nodes that were transformed (and mapped to output nodes) and the rest of the graph
-        for graph_node in reverse_transform_dict:
-            if graph_node in cur_node_dict:
-                out_nodes = cur_node_dict[graph_node]
-                num_out_nodes = len(cur_node_dict[graph_node])
-                for pre_node in graph.predecessors(graph_node):
-                    if pre_node not in reverse_transform_dict:
-                        cur_order = graph.get_edge_data(pre_node, graph_node)["order"]
-                        # out_edges with data=True returns a tuple of (pre_node, suc_node, {attribute_keys: attribute_values})
-                        # The following code ensures that order is preserved
-                        for edge in graph.out_edges(pre_node, data=True):
-                            if edge[2]["order"] > cur_order:
-                                edge[2]["order"] += num_out_nodes - 1
-                        for i, node in enumerate(out_nodes):
-                            graph.add_edge(pre_node, node, order=cur_order + i)
-                for suc_node in graph.successors(graph_node):
-                    if suc_node not in reverse_transform_dict:
-                        for node in cur_node_dict[graph_node]:
-                            graph.add_edge(node, suc_node, order=graph.get_edge_data(graph_node, suc_node)["order"])
+        for graph_node in cur_node_dict:
+            out_nodes = cur_node_dict[graph_node]
+            num_out_nodes = len(cur_node_dict[graph_node])
+            for pre_node in graph.predecessors(graph_node):
+                if pre_node not in reverse_transform_dict:
+                    cur_order = graph.get_edge_data(pre_node, graph_node)["order"]
+                    # out_edges with data=True returns a tuple of (pre_node, suc_node, {attribute_keys: attribute_values})
+                    # The following code ensures that order is preserved
+                    for edge in graph.out_edges(pre_node, data=True):
+                        if edge[2]["order"] > cur_order:
+                            edge[2]["order"] += num_out_nodes - 1
+                    for i, node in enumerate(out_nodes):
+                        graph.add_edge(pre_node, node, order=cur_order + i)
+            for suc_node in graph.successors(graph_node):
+                if suc_node not in reverse_transform_dict:
+                    for node in cur_node_dict[graph_node]:
+                        graph.add_edge(node, suc_node, order=graph.get_edge_data(graph_node, suc_node)["order"])
         for graph_node in reverse_transform_dict:
             graph.remove_node(graph_node)
-
+            
         del self._cur_graph
         del self._cur_transform_dict
         del self._cur_reverse_transform_dict
