@@ -17,16 +17,17 @@ class PymLiz:
         view(): Returns the value represented by the object's graph
     """
     
-    def __init__(self, parser_obj, constraint_types=None, modules_to_import=None, initialize=False) -> None:
+    def __init__(self, viewer, parser_obj, constraint_types=None, modules=None, initialize=False) -> None:
         self._parser_obj = parser_obj
         self._variables_constants = parser_obj.variables_constants
         self._functions = parser_obj.functions
         self._graph = parser_obj.graph
+        self._viewer = viewer
         self._RuleSearch = RuleSearch()
         
-        if modules_to_import is None:
-            modules_to_import = dict()
-        self._modules_to_import = modules_to_import
+        if modules is None:
+            modules = dict()
+        self._modules = modules
         
         if constraint_types is None:
             self._constraint_types = dict()
@@ -97,10 +98,13 @@ class PymLiz:
             rule.apply(self._graph, transform_dict, deepcopy_graph=False)
     
     def view(self):
+        return self._viewer.view(self)
+        
+    def run(self):
         """
         Returns the value represented by the object's graph
         """
-        for obj, obj_name in self._modules_to_import.items():
+        for obj, obj_name in self._modules.items():
             exec(f"import {obj} as {obj_name}")
         connected_components = list(self._graph.successors("root_node"))
         result = []

@@ -7,7 +7,7 @@ from itertools import product, chain
 
 class RuleSearch:
     """
-    Rule search object for graph transformation
+    Rule search class for graph transformation
     
     RuleSearch objects are callable and return a generator, yielding subgraphs that match a rule's input graph
     """

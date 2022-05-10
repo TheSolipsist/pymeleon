@@ -9,7 +9,7 @@ class Wrapper:
 
 class Node(Wrapper):
     """
-    Node objects for usage in the graph
+    Node class for usage in the graph
     
     -- Parameters --
         value: The node's value
@@ -35,7 +35,7 @@ class ParsingError(Exception):
 
 class Parser:
     """
-    Parser for graph generation from Python expressions
+    Parser class for graph generation from Python expressions
     
     -- Parameters --
         expression: String containing the Python expression

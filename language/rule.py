@@ -12,7 +12,7 @@ class BadGraph(Exception):
     
 class Rule:
     """
-    Rule object for graph transformation
+    Rule class for graph transformation
     
     -- Parameters --
         parser_obj_in: the parser object representing the graph that the rule can be applied to
@@ -171,7 +171,8 @@ class Rule:
 
         # Remove the edges that make up the structure of the generic input graph
         for in_node in self._graph_in.successors("root_node"):
-            graph.remove_edge("root_node", transform_dict[in_node])
+            if graph.has_edge("root_node", transform_dict[in_node]):
+                graph.remove_edge("root_node", transform_dict[in_node])
             self._remove_mapped_edges_rec(in_node)
 
         self._add_output_graph()
