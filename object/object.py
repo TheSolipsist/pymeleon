@@ -114,4 +114,4 @@ class PymLiz:
         if len(result) == 1:
             return result[0]
         else:
-            return result
+            return None
