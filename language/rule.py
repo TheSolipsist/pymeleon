@@ -199,6 +199,12 @@ class Rule:
                     for node in cur_node_dict[graph_node]:
                         graph.add_edge(node, suc_node, order=graph.get_edge_data(graph_node, suc_node)["order"])
         for graph_node in reverse_transform_dict:
+            # Fix order for any sibling nodes and then remove the node
+            for pre_node in graph.predecessors(graph_node):
+                cur_order = graph.get_edge_data(pre_node, graph_node)["order"]
+                for edge in graph.out_edges(pre_node, data=True):
+                    if edge[2]["order"] > cur_order:
+                        edge[2]["order"] -= 1
             graph.remove_node(graph_node)
             
         del self._cur_graph
