@@ -191,9 +191,9 @@ class Rule:
                     # The following code ensures that order is preserved
                     for edge in graph.out_edges(pre_node, data=True):
                         if edge[2]["order"] > cur_order:
-                            edge[2]["order"] += num_out_nodes - 1
+                            edge[2]["order"] += num_out_nodes
                     for i, node in enumerate(out_nodes):
-                        graph.add_edge(pre_node, node, order=cur_order + i)
+                        graph.add_edge(pre_node, node, order=cur_order + i + 1)
             for suc_node in graph.successors(graph_node):
                 if suc_node not in reverse_transform_dict:
                     for node in cur_node_dict[graph_node]:
