@@ -34,21 +34,15 @@ class RandomViewer(Viewer):
         
     def view(self, obj: PymLiz):
         rules = self.language.rules
-        num_rules = len(rules)
-        while True:
+        for _ in range(100):
             chosen_rule = choice(rules)
             transform_dicts = tuple(obj.search(chosen_rule))
-            
             if not transform_dicts:
-                i += 1
-                if i == num_rules:
-                    print("No more rules to be applied, returning object")
-                    raise BreakFromLoop
-                else:
-                    continue
+                continue
             chosen_transform_dict = choice(transform_dicts)
             obj.apply(chosen_rule, chosen_transform_dict, inplace=True)
             save_graph(obj._graph, print=True)
             result = obj.run()
             if result:
                 return result
+            
