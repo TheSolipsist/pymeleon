@@ -205,6 +205,9 @@ class Rule:
                 for edge in graph.out_edges(pre_node, data=True):
                     if edge[2]["order"] > cur_order:
                         edge[2]["order"] -= 1
+            for suc_node in graph.successors(graph_node):
+                if graph.in_degree(suc_node) == 1:
+                    graph.add_edge("root_node", suc_node, order=-1)
             graph.remove_node(graph_node)
             
         del self._cur_graph
