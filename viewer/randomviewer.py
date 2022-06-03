@@ -43,6 +43,6 @@ class RandomViewer(Viewer):
             obj.apply(chosen_rule, chosen_transform_dict, inplace=True)
             save_graph(obj._graph, print=True)
             result = obj.run()
-            if result:
+            if result is not None:
                 return result
             
