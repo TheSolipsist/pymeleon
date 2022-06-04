@@ -23,9 +23,9 @@ class Node(Wrapper):
         
     def copy(self):
         """
-        Returns a shallow copy of the Node object
+        Returns a deep copy of the Node object
         """
-        return Node(self.value, constraints=self.constraints)
+        return Node(self.value, constraints=self.constraints.copy())
 
 class Expression(Wrapper):
     pass
