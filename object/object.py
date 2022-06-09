@@ -30,13 +30,15 @@ class PymLiz:
         self._modules = modules
         
         if constraint_types is None:
-            self._constraint_types = dict()
-        else:
-            self._find_satisfied_constraint_types(constraint_types, parser_obj.graph)
+            constraint_types = dict()
         self._constraint_types = constraint_types
+        self._find_satisfied_constraint_types(constraint_types, parser_obj.graph)
         
         if initialize:
             self._variable_names_to_values()
+    
+    def copy(self):
+        return PymLiz(viewer=self._viewer, parser_obj=self._parser_obj, )
     
     def _find_satisfied_constraint_types(self, constraint_types, graph):
         for constraint_type, constraint in constraint_types.items():
