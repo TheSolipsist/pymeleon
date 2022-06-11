@@ -80,12 +80,6 @@ class PymLiz:
                 return expression[:-1] + ")"
         else:
             return str(starting_node.value)
-
-    def search(self, rule):
-        """
-        Iterates through the possible subgraphs (in the form of transform_dicts) that match a rule's input graph
-        """
-        return self._RuleSearch(rule, self._graph)
     
     def apply(self, rule, transform_dict, inplace=False):
         """

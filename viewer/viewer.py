@@ -1,3 +1,5 @@
+from language.rule import Rule
+
 class Viewer:
     """
     Abstract viewer class
@@ -20,4 +22,7 @@ class Viewer:
     
     def view(self):
         raise NotImplementedError("'view' method not implemented")
+    
+    def search(self):
+        raise NotImplementedError("'search' method not implemented")
     

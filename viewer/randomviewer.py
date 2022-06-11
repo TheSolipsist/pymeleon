@@ -4,6 +4,7 @@ from language.parser import Parser
 from language.language import Language
 from random import choice
 from utilities.util_funcs import save_graph
+from language.rule_search import RuleSearch
 
 class BreakFromLoop(Exception):
     """
@@ -26,6 +27,7 @@ class RandomViewer(Viewer):
     """
     def __init__(self, language: Language, modules: dict=None):
         super().__init__(language)
+        self._RuleSearch = RuleSearch()
         self.modules=modules
     
     def blob(self, *args):
@@ -36,7 +38,7 @@ class RandomViewer(Viewer):
         rules = self.language.rules
         for _ in range(100):
             chosen_rule = choice(rules)
-            transform_dicts = tuple(obj.search(chosen_rule))
+            transform_dicts = tuple(self.search(chosen_rule, obj))
             if not transform_dicts:
                 continue
             chosen_transform_dict = choice(transform_dicts)
@@ -45,4 +47,10 @@ class RandomViewer(Viewer):
             result = obj.run()
             if result is not None:
                 return result
+        
+    def search(self, rule, obj: PymLiz):
+        """
+        Iterates through the possible subgraphs (in the form of transform_dicts) that match a rule's input graph
+        """
+        return self._RuleSearch(rule, obj._graph)
             
