@@ -1,67 +1,46 @@
-from language.rule_search import RuleSearch
-from language.parser import Parser
+from language.parser import Parser, PymLizParser
 
 class PymLiz:
     """
     Object to apply rules on
     
     -- Parameters --
-        parser_obj: the parser object representing the graph of the object to use
-        initialize: specifies whether to automatically replace variable names with their values (default: True) 
+        viewer: The viewer which creates the object
+        parser_obj: The parser object representing the graph of the object to use
+        constraint_types: All constraint types to check for the object's components
+        modules: All modules to be used when "running" the object (returning its value)
     
     -- Methods --
         search(rule): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
         a rule's input graph
         apply(rule, transform_dict): Applies the rule to the object, using the specific transform_dict (found
         by using search(rule))
-        view(): Returns the value represented by the object's graph
+        view(): Calls the viewer's "view" method
     """
     
-    def __init__(self, viewer, parser_obj, constraint_types=None, modules=None, initialize=False) -> None:
+    def __init__(self, viewer, parser_obj: PymLizParser, constraint_types=None, modules=None) -> None:
         self._parser_obj = parser_obj
-        self._variables_constants = parser_obj.variables_constants
-        self._functions = parser_obj.functions
         self._graph = parser_obj.graph
         self._viewer = viewer
-        self._RuleSearch = RuleSearch()
-        
         if modules is None:
             modules = dict()
         self._modules = modules
-        
         if constraint_types is None:
             constraint_types = dict()
         self._constraint_types = constraint_types
         self._find_satisfied_constraint_types(constraint_types, parser_obj.graph)
-        
-        if initialize:
-            self._variable_names_to_values()
     
     def copy(self):
-        return PymLiz(viewer=self._viewer, parser_obj=self._parser_obj, )
+        return PymLiz(viewer=self._viewer, 
+                      parser_obj=self._parser_obj.copy(), 
+                      constraint_types=self._constraint_types.copy(),
+                      modules=self._modules.copy())
     
     def _find_satisfied_constraint_types(self, constraint_types, graph):
         for constraint_type, constraint in constraint_types.items():
             for node in tuple(graph.nodes)[1:]:
                 if constraint(node.value):
                     node.constraints.add(constraint_type)
-            
-    def _variable_names_to_values(self):
-        # Python dictionaries are ordered since 3.7, so the first element will always be "root_node"
-        import config
-        local_vars = config.locals
-        global_vars = config.globals
-        variables_constants = self._variables_constants
-        for node in tuple(self._graph.nodes)[1:]:
-            node_value = node.value
-            if node_value in variables_constants:
-                if node_value in local_vars:
-                    node.value = local_vars[node_value]
-                elif node_value in global_vars:
-                    node.value = global_vars[node_value]
-                    print(f"WARNING: {node_value} is defined only in the global namespace: {node.value}")
-                else:
-                    raise NameError(f"name '{node_value}' is not defined")
     
     def _deparse_component(self, starting_node):
         """

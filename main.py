@@ -1,4 +1,4 @@
-from language.parser import Parser
+from language.parser import RuleParser
 from matplotlib import pyplot as plt
 from language.rule import Rule
 from viewer.randomviewer import RandomViewer
@@ -13,14 +13,14 @@ constraint_types = {"islist": lambda x: isinstance(x, list),
                     "isint": lambda x: isinstance(x, int),
                     "isfloat": lambda x: isinstance(x, float)}
 
-convert_to_nparr = Rule(Parser("a", constraints={"a": "islist"}, mode="RULE"),
-                       Parser("np.array(a)", constraints={"np.array": "isnparray"}, mode="RULE"))
+convert_to_nparr = Rule(RuleParser("a", constraints={"a": "islist"}),
+                       RuleParser("np.array(a)", constraints={"np.array": "isnparray"}))
 
-dot_product = Rule(Parser("a", "b", constraints={"a": "isnparray", "b": "isnparray"}, mode="RULE"),
-                   Parser("np.sum(a*b)", constraints={"np.sum": "isnparray"}, mode="RULE"))
+dot_product = Rule(RuleParser("a", "b", constraints={"a": "isnparray", "b": "isnparray"}),
+                   RuleParser("np.sum(a*b)", constraints={"np.sum": "isnparray"}))
 
-remove_item = Rule(Parser("a", constraints={"a": "isnparray"}, mode="RULE"),
-                   Parser("", mode="RULE"))
+remove_item = Rule(RuleParser("a", constraints={"a": "isnparray"}),
+                   RuleParser(""))
 
 modules = {"numpy": "np"}
     
@@ -34,24 +34,4 @@ lang.add_types(constraint_types)
 
 viewer = RandomViewer(lang, modules)
 obj = viewer.blob(list1, list2)
-
-from random import choice
-chosen_rule = convert_to_nparr
-transform_dicts = tuple(obj.search(chosen_rule))
-chosen_transform_dict = choice(transform_dicts)
-obj.apply(chosen_rule, chosen_transform_dict, inplace=True)
-save_graph(obj._graph, print=True)
-chosen_rule = convert_to_nparr
-transform_dicts = tuple(obj.search(chosen_rule))
-chosen_transform_dict = choice(transform_dicts)
-obj.apply(chosen_rule, chosen_transform_dict, inplace=True)
-save_graph(obj._graph, print=True)
-chosen_rule = remove_item
-transform_dicts = tuple(obj.search(chosen_rule))
-chosen_transform_dict = choice(transform_dicts)
-obj.apply(chosen_rule, chosen_transform_dict, inplace=True)
-save_graph(obj._graph, print=True)
-
-
-
-# print(obj.view())
+print(obj.view())

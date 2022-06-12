@@ -1,18 +1,21 @@
 from language.rule import Rule
+from object.object import PymLiz
 
 class Viewer:
     """
     Abstract viewer class
     
     -- Parameters --
-        language(Language): the language object from which to find Rules
+        language(Language): The language object from which to find Rules
         
     -- Attributes --
-        language(Language): the viewer's language
+        language(Language): The viewer's language
         
     -- Methods --
-        blob(*args): creates and returns the PymLiz object
-        view(): returns the object after having changed it according to the viewer's function
+        blob(*args): Creates and returns the PymLiz object
+        view(): Returns the object after having changed it according to the viewer's function
+        search(rule, obj): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
+            a rule's input graph
     """
     def __init__(self, language):
         self.language = language
@@ -23,6 +26,6 @@ class Viewer:
     def view(self):
         raise NotImplementedError("'view' method not implemented")
     
-    def search(self):
+    def search(self, rule: Rule, obj: PymLiz):
         raise NotImplementedError("'search' method not implemented")
     

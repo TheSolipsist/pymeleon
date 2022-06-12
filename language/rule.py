@@ -15,16 +15,16 @@ class Rule:
     Rule class for graph transformation
     
     -- Parameters --
-        parser_obj_in: the parser object representing the graph that the rule can be applied to
-        parser_obj_out: the parser object representing the graph after the application of the rule
-        other_node_dict: dictionary mapping input to output nodes that are not inferrable by variable names
+        parser_obj_in: The parser object representing the graph that the rule can be applied to
+        parser_obj_out: The parser object representing the graph after the application of the rule
+        other_node_dict: Dictionary mapping input to output nodes that are not inferrable by variable names
     
     -- Attributes --
-        node_dict: dictionary mapping nodes from the generic input graph to the generic output graph (1-n)
-        reverse_node_dict: dictionary mapping nodes from the generic output graph to the generic input graph (1-1)
+        node_dict: Dictionary mapping nodes from the generic input graph to the generic output graph (1-n)
+        reverse_node_dict: Dictionary mapping nodes from the generic output graph to the generic input graph (1-1)
         
     -- Methods --
-        apply(graph): applies the rule to the specified graph
+        apply(graph): Applies the rule to the specified graph
     """
     
     def __init__(self, parser_obj_in, parser_obj_out, other_node_dict=None, operator_dict=None) -> None:
@@ -152,12 +152,12 @@ class Rule:
         Applies the rule to the specified graph
 
         -- Arguments --
-            graph (networkx DiGraph): the graph to transform
-            transform_dict (dict): dictionary mapping each node in the generic input graph to a node in the graph to be transformed
+            graph (networkx DiGraph): The graph to transform
+            transform_dict (dict): Dictionary mapping each node in the generic input graph to a node in the graph to be transformed
             deepcopy_graph (bool): Specifies whether the graph will be deepcopied and returned or transformed in place
         
         -- Returns --
-            transformed_graph (networkx DiGraph): the transformed graph
+            transformed_graph (networkx DiGraph): The transformed graph
         """
         
         reverse_transform_dict = {v: k for k, v in transform_dict.items()}

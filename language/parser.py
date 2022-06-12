@@ -35,18 +35,8 @@ class ParsingError(Exception):
 
 class Parser:
     """
-    Parser class for graph generation from Python expressions
-    
-    -- Parameters --
-        expression: String containing the Python expression
-        constraints: Dictionary mapping expression variables to constraints (e.g. type)
-    
-    -- Attributes --
-        graph: The generated networkx graph
-        variables_constants: Set containing all variables and constants in the expression
-        functions: Set containing all functions in the expression
+    Abstract Parser class for graph generation from Python expressions
     """
-     
     # The following operators should be written in reverse order of execution hierarchy (e.g. + is higher than *)
     SUPPORTED_OPERATORS = {
         "-":    "__pymeleon_sub",
@@ -60,47 +50,65 @@ class Parser:
     }
     SUPPORTED_OPERATORS_REVERSE = {v: k for k, v in SUPPORTED_OPERATORS.items()}
     
-    def __init__(self, *args, mode=None, constraints=None) -> None:
+    def __init__(self, *args, constraints=None) -> None:
+        raise NotImplementedError("Abstract Parser __init__ should not be called")
+
+class RuleParser(Parser):
+    """
+    Parser class for Rule components
+    
+    -- Parameters --
+        expression: String containing the Python expression
+        constraints: Dictionary mapping expression variables to constraints (e.g. type)
+    
+    -- Attributes --
+        graph: The generated networkx graph
+        variables_constants: Set containing all variables and constants in the expression
+        functions: Set containing all functions in the expression
+    """
+    def __init__(self, *args, constraints=None) -> None:
         self.functions, self.variables_constants = set(), set()
-        if mode == "RULE":
-            # In order to avoid any parsing errors with "**" and "*", exponentiation is represented by "^"
-            self._args = args
-            component_graphs = []
-            for expression in args:
-                expression = expression.replace(" ", "").replace("**", "^")
-                try:
-                    graph, functions, variables_constants = self._generate_graph(expression)
-                    self.functions |= functions
-                    self.variables_constants |= variables_constants
-                    component_graphs.append(graph)
-                except ValueError:
-                    print("Inappropriate expression. Refer to the parser's requirements.")
-            self.graph = nx.compose_all(component_graphs)
-                
-        elif mode == "PYMLIZ":
-            self.graph = self._generate_graph_simple(args)
-        else:
-            raise ParsingError
+        self._args = args
+        component_graphs = []
+        for expression in args:
+            if not isinstance(expression, str):
+                raise ParsingError("RuleParser requires str arguments")
+            # Exponentiation is represented by "^", occurences of "**" are replaced
+            expression = expression.replace(" ", "").replace("**", "^")
+            try:
+                graph, functions, variables_constants = self._generate_graph(expression)
+                self.functions |= functions
+                self.variables_constants |= variables_constants
+                component_graphs.append(graph)
+            except ValueError:
+                print("Inappropriate expression. Refer to the parser's requirements.")
+        self.graph = nx.compose_all(component_graphs)
         if constraints is None:
             self.constraints = dict()
         else:
             self.constraints = self._fix_constraints(constraints)
             self._add_constraints_to_nodes(self.graph, self.constraints)
 
-
+    def _fix_constraints(self, constraints):
+        """
+        Returns a fixed constraints dict (each value should be an iterable yielding constraint types)
+        """
+        for node_value in constraints:
+            node_constraints = constraints[node_value]
+            if not isinstance(node_constraints, (list, tuple, set)):
+                constraints[node_value] = (node_constraints,)
+        return constraints
     
-    # --- PRIVATE METHODS START ---
-                
-    def _generate_graph_simple(self, args):
+    def _add_constraints_to_nodes(self, graph, constraints):
         """
-        Generates the graph when a series of arbitrary objects is given
+        Adds any constraints from the constraints dicts to their corresponding nodes
+        Example: {"a": "isint"} -> node_a.constraints == set(..., "isint")
         """
-        graph = nx.DiGraph()
-        graph.add_node("root_node")
-        for i, item in enumerate(args):
-            graph.add_edge("root_node", Node(item), order=i+1)
-        return graph
-        
+        for node in tuple(graph.nodes)[1:]: # Skipping "root_node"
+            if node.value in constraints:
+                for constraint in constraints[node.value]:
+                    node.constraints.add(constraint)
+    
     def _generate_graph(self, expression):
         """
         Generates and returns an expression's graph, functions and variables_constants
@@ -232,24 +240,29 @@ class Parser:
         brackets_list = parse_brackets_rec(expr_obj)
         return brackets_list, functions, variables_constants
 
-    def _fix_constraints(self, constraints):
-        """
-        Returns a fixed constraints dict (each value should be an iterable yielding constraint types)
-        """
-        for node_value in constraints:
-            node_constraints = constraints[node_value]
-            if not isinstance(node_constraints, (list, tuple, set)):
-                constraints[node_value] = (node_constraints,)
-        return constraints
+class PymLizParser(Parser):
+    """
+    Parser class for object creation
     
-    def _add_constraints_to_nodes(self, graph, constraints):
+    -- Parameters --
+        Unpacked list of arbitrary objects
+    
+    -- Attributes --
+        graph: networkx Digraph representing the object
+    """
+    def __init__(self, *args) -> None:
+        self.args = args
+        self.graph = self._generate_graph_simple(args)
+    
+    def copy(self):
+        return PymLizParser(*self.args)
+
+    def _generate_graph_simple(self, args):
         """
-        Adds any constraints from the constraints dicts to their corresponding nodes
-        Example: {"a": "isint"} -> node_a.constraints == set(..., "isint")
+        Generates the graph when a series of arbitrary objects is given
         """
-        for node in tuple(graph.nodes)[1:]: # Skipping "root_node"
-            if node.value in constraints:
-                for constraint in constraints[node.value]:
-                    node.constraints.add(constraint)
-                    
-    # --- PRIVATE METHODS END ---
+        graph = nx.DiGraph()
+        graph.add_node("root_node")
+        for i, item in enumerate(args):
+            graph.add_edge("root_node", Node(item), order=i+1)
+        return graph
