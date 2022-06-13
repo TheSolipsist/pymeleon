@@ -48,4 +48,12 @@ class GeneticViewer(Viewer):
         return self._RuleSearch(rule, obj._graph)
     
     def fitness(self):
+        """
+        Fitness function for the genetic algorithm
+        
+        Checks if the desired graph structure is found in each of the components of the graph. The score starts as
+        1 if at least 1 component follows the desired graph structure (otherwise -inf), gets divided by the number
+        of connected components and is penalized by the total number of incoming edges squared for each node (times
+        a constant lambda)
+        """
         pass
