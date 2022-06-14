@@ -49,7 +49,7 @@ class RandomViewer(Viewer):
             obj.apply(chosen_rule, chosen_transform_dict, inplace=True)
             save_graph(obj._graph, print=True)
             result = obj.run()
-            if result is not None:
+            if not isinstance(result, list):
                 return result
         
     def search(self, rule: Rule, obj: PymLiz):

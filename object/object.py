@@ -36,6 +36,9 @@ class PymLiz:
                       constraint_types=self._constraint_types.copy(),
                       modules=self._modules.copy())
     
+    def get_graph(self):
+        return self._graph
+    
     def _find_satisfied_constraint_types(self, constraint_types, graph):
         for constraint_type, constraint in constraint_types.items():
             for node in tuple(graph.nodes)[1:]:
@@ -68,7 +71,8 @@ class PymLiz:
         the rule is not to be applied to the graph inplace, return the transformed graph
         """
         if not inplace:
-            return rule.apply(self._graph, transform_dict, deepcopy_graph=True)
+            self._graph = rule.apply(self._graph, transform_dict, deepcopy_graph=True)
+            return self
         else:
             rule.apply(self._graph, transform_dict, deepcopy_graph=False)
     
@@ -89,4 +93,4 @@ class PymLiz:
         if len(result) == 1:
             return result[0]
         else:
-            return None
+            return result

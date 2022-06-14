@@ -266,3 +266,13 @@ class PymLizParser(Parser):
         for i, item in enumerate(args):
             graph.add_edge("root_node", Node(item), order=i+1)
         return graph
+    
+class GeneticParser(RuleParser):
+    """
+    Parser to use with Genetic (or other) viewers
+    """
+    def __init__(self, *args, constraints=None):
+        super().__init__(*args, constraints=constraints)
+    
+    def get_graph(self) -> nx.DiGraph:
+        return self.graph
