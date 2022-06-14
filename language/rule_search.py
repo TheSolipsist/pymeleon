@@ -26,12 +26,11 @@ class RuleSearch:
         -- Returns --
             search_iter: Iterator yielding the transform_dicts corresponding to the matching subgraphs
         """
-        return self._find_subgraphs(rule, target_graph)
+        return self._find_subgraphs(rule._graph_in, target_graph)
 
     def _check_node_subgraph_rec(self, node_input_graph, node):
-        for constraint in node_input_graph.constraints:
-            if constraint not in node.constraints:
-                return False
+        if not node_input_graph.constraints.issubset(node.constraints):
+            return False
         self._cur_transform_dict[node_input_graph] = node
         for suc_input_node in self._cur_input_graph.successors(node_input_graph):
             order = self._cur_input_graph[node_input_graph][suc_input_node]["order"]
@@ -65,13 +64,13 @@ class RuleSearch:
                 matching_subgraphs.append(self._cur_transform_dict)
         return matching_subgraphs
 
-    def _find_subgraphs(self, rule, target_graph):
+    def _find_subgraphs(self, rule_graph_in, target_graph):
         """
         Returns a generator yielding transform_dicts that match a rule's input graph from a given graph
 
         Should only be called by __call__
         """
-        self._cur_input_graph = rule._graph_in
+        self._cur_input_graph = rule_graph_in
         self._cur_target_graph = target_graph
         connected_subgraphs = []
         for node in self._cur_input_graph.successors("root_node"):
