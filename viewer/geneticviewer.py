@@ -30,12 +30,10 @@ class GeneticViewer(Viewer):
         search(rule, obj): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
             a rule's input graph
     """
-    def __init__(self, language: Language, parser_obj: GeneticParser, modules: dict=None, 
-                 n_iter=10, n_generations=50, penalty_coefficient=0.1, n_fittest=10):
+    def __init__(self, language: Language, modules: dict=None, 
+                 n_iter=10, n_generations=50, penalty_coefficient=0.1, n_fittest=1000):
         super().__init__(language)
         self._RuleSearch = RuleSearch()
-        self.target_graph = parser_obj.get_graph()
-        self.target_penalty = self._calculate_target_penalty(self.target_graph)
         if modules is None:
             modules = dict()
         self.modules=modules
@@ -51,10 +49,12 @@ class GeneticViewer(Viewer):
         obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, modules=self.modules)
         return obj
     
-    def view(self, obj: PymLiz):
+    def view(self, obj: PymLiz, parser_obj: GeneticParser):
         """
         Returns the object's output after having changed it according to the viewer's function
         """
+        target_graph = parser_obj.get_graph()
+        target_penalty = self._calculate_target_penalty(target_graph)
         rules = self.language.rules
         max_score = float("-inf")
         n_iter = self.n_iter
@@ -63,7 +63,7 @@ class GeneticViewer(Viewer):
         for i_iter in range(n_iter):
             obj_list = [obj.copy() for __ in range(n_fittest)]
             for i_gen in range(n_generations):
-                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}", end = '')
+                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end = '')
                 for i in range(n_fittest):
                     current_obj = obj_list[i]
                     chosen_rule = choice(rules)
@@ -74,13 +74,14 @@ class GeneticViewer(Viewer):
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
-                obj_list.sort(key=lambda obj: self.fitness(obj.get_graph(), self.target_graph))
+                obj_list.sort(key=lambda obj: self.fitness(obj.get_graph(), target_graph, target_penalty), reverse=True)
                 del obj_list[n_fittest:]
             current_best_obj = obj_list[0]
-            current_best_score = self.fitness(current_best_obj.get_graph(), self.target_graph)
+            current_best_score = self.fitness(current_best_obj.get_graph(), target_graph, target_penalty)
             if current_best_score > max_score:
                 max_score = current_best_score
                 best_obj = current_best_obj
+        print()
         return best_obj.run()
                 
         
@@ -91,8 +92,7 @@ class GeneticViewer(Viewer):
         return self._RuleSearch(rule, obj._graph)
     
     def _calculate_target_penalty(self, target_graph):
-        graph = target_graph
-        return sum((graph.in_degree(node) ** 2 for node in graph))
+        return sum((target_graph.in_degree(node) ** 2 for node in target_graph))
         
     def _check_graph_match_rec(self, wrapper_obj: RecursionObject, root_node, target_root_node):
         graph = wrapper_obj.graph
@@ -113,18 +113,18 @@ class GeneticViewer(Viewer):
                 return False
         return True
     
-    def _calculate_regularized_score(self, graph, score, num_of_root_successors):
+    def _calculate_regularized_score(self, graph, score, num_of_root_successors, target_penalty):
         score /= num_of_root_successors
-        penalty = max(0, sum((graph.in_degree(node) ** 2 for node in graph)) - self.target_penalty)
+        penalty = max(0, sum((graph.in_degree(node) ** 2 for node in graph)) - target_penalty)
         score -= penalty * self.penalty_coefficient
         return score
             
-    def fitness(self, graph, target_graph):
+    def fitness(self, graph, target_graph, target_penalty):
         """
         Fitness function for the genetic algorithm
         
         Checks if the desired graph structure is found in each of the components of the graph. The score starts as
-        1 if at least 1 component follows the desired graph structure (otherwise -inf), gets divided by the number
+        1 if at least 1 component follows the desired graph structure (otherwise 0), gets divided by the number
         of connected components and is penalized by the total number of incoming edges squared for each node (times
         a parameter)
         """
@@ -135,9 +135,9 @@ class GeneticViewer(Viewer):
         root_successors = tuple(graph.successors("root_node"))
         target_root_successor = next(target_graph.successors("root_node"))
         for node in root_successors:
-            if self._check_graph_match_rec(wrapper_obj, node, target_root_successor) is True:
+            if self._check_graph_match_rec(wrapper_obj, node, target_root_successor):
                 score = 1
                 break
-        score = self._calculate_regularized_score(graph, score, len(root_successors))
+        score = self._calculate_regularized_score(graph, score, len(root_successors), target_penalty)
         return score
         

@@ -76,8 +76,8 @@ class PymLiz:
         else:
             rule.apply(self._graph, transform_dict, deepcopy_graph=False)
     
-    def view(self):
-        return self._viewer.view(self)
+    def view(self, *args):
+        return self._viewer.view(self, *args)
         
     def run(self):
         """

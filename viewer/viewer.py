@@ -23,7 +23,7 @@ class Viewer:
     def blob(self, *args):
         raise NotImplementedError("'blob' method not implemented")
     
-    def view(self):
+    def view(self, *args):
         raise NotImplementedError("'view' method not implemented")
     
     def search(self, rule: Rule, obj: PymLiz):
