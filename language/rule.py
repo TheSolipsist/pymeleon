@@ -4,12 +4,14 @@ Rule module
 from networkx import DiGraph
 from collections import defaultdict
 
+
 class BadGraph(Exception):
     """
     Invalid graph input Exception
     """
     pass
-    
+
+
 class Rule:
     """
     Rule class for graph transformation
@@ -26,22 +28,19 @@ class Rule:
     -- Methods --
         apply(graph): Applies the rule to the specified graph
     """
-    
     def __init__(self, parser_obj_in, parser_obj_out, other_node_dict=None, operator_dict=None) -> None:
         self._parser_obj_in = parser_obj_in
         self._parser_obj_out = parser_obj_out
-        
+
         self._graph_in = parser_obj_in.graph
         self._obj_in = parser_obj_in.variables_constants
         self._funcs_in = parser_obj_in.functions
-        
+
         self._graph_out = parser_obj_out.graph
         self._obj_out = parser_obj_out.variables_constants
-        self._funcs_out= parser_obj_out.functions
+        self._funcs_out = parser_obj_out.functions
 
         self._create_node_dict(other_node_dict, operator_dict)
-                
-
 
     # ------- PRIVATE METHODS START ------- #
 
@@ -78,7 +77,8 @@ class Rule:
                 input_node = self._cur_reverse_transform_dict[node]
                 self._cur_reverse_transform_dict_copy[node_copy] = input_node
                 self._cur_transform_dict_copy[input_node] = node_copy
-            self._cur_graph_copy.add_edge(root_node_copy, node_copy, order=self._cur_graph.get_edge_data(root_node, node)["order"])
+            self._cur_graph_copy.add_edge(root_node_copy, node_copy,
+                                          order=self._cur_graph.get_edge_data(root_node, node)["order"])
             self._copy_apply_graph_rec(node, node_copy)
 
     def _copy_apply_graph(self, graph, reverse_transform_dict):
@@ -145,8 +145,6 @@ class Rule:
 
     # ------- PRIVATE METHODS END ------- #
 
-
-
     def apply(self, graph, transform_dict, deepcopy_graph=True):
         """
         Applies the rule to the specified graph
@@ -159,7 +157,7 @@ class Rule:
         -- Returns --
             transformed_graph (networkx DiGraph): The transformed graph
         """
-        
+
         reverse_transform_dict = {v: k for k, v in transform_dict.items()}
 
         if deepcopy_graph:
@@ -209,7 +207,7 @@ class Rule:
                 if graph.in_degree(suc_node) == 1:
                     graph.add_edge("root_node", suc_node, order=-1)
             graph.remove_node(graph_node)
-            
+
         del self._cur_graph
         del self._cur_transform_dict
         del self._cur_reverse_transform_dict

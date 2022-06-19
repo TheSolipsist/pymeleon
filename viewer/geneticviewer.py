@@ -7,12 +7,15 @@ from random import choice
 from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
 
+
 class RecursionObject:
     """
     Object to be used for recursion (to pass less arguments in each recursion step)
     """
+
     def __init__(self):
         pass
+
 
 class GeneticViewer(Viewer):
     """
@@ -30,25 +33,26 @@ class GeneticViewer(Viewer):
         search(rule, obj): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
             a rule's input graph
     """
-    def __init__(self, language: Language, modules: dict=None, 
-                 n_iter=10, n_generations=50, penalty_coefficient=0.1, n_fittest=1000):
+
+    def __init__(self, language: Language, modules: dict = None,
+                 n_iter=10, n_generations=50, penalty_coefficient=0.1, n_fittest=10):
         super().__init__(language)
         self._RuleSearch = RuleSearch()
         if modules is None:
             modules = dict()
-        self.modules=modules
+        self.modules = modules
         self.n_iter = n_iter
         self.n_generations = n_generations
         self.penalty_coefficient = penalty_coefficient
         self.n_fittest = n_fittest
-    
+
     def blob(self, *args):
         """
         Creates and returns the PymLiz object
         """
         obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, modules=self.modules)
         return obj
-    
+
     def view(self, obj: PymLiz, parser_obj: GeneticParser):
         """
         Returns the object's output after having changed it according to the viewer's function
@@ -63,7 +67,7 @@ class GeneticViewer(Viewer):
         for i_iter in range(n_iter):
             obj_list = [obj.copy() for __ in range(n_fittest)]
             for i_gen in range(n_generations):
-                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end = '')
+                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end='')
                 for i in range(n_fittest):
                     current_obj = obj_list[i]
                     chosen_rule = choice(rules)
@@ -83,42 +87,41 @@ class GeneticViewer(Viewer):
                 best_obj = current_best_obj
         print()
         return best_obj.run()
-                
-        
+
     def search(self, rule: Rule, obj: PymLiz):
         """
         Iterates through the possible subgraphs (in the form of transform_dicts) that match a rule's input graph
         """
         return self._RuleSearch(rule, obj._graph)
-    
+
     def _calculate_target_penalty(self, target_graph):
         return sum((target_graph.in_degree(node) ** 2 for node in target_graph))
-        
+
     def _check_graph_match_rec(self, wrapper_obj: RecursionObject, root_node, target_root_node):
         graph = wrapper_obj.graph
         target_graph = wrapper_obj.target_graph
         # Successor nodes are ordered by their "order" edge attribute in relation to their root node
         target_suc_nodes = sorted(list(target_graph.successors(target_root_node)),
-                                   key=lambda node: target_graph[target_root_node][node]["order"])
+                                  key=lambda node: target_graph[target_root_node][node]["order"])
         # If there are no more successor nodes in the target graph, we found everything we needed
         if not target_suc_nodes:
             return True
-        suc_nodes = sorted(list(graph.successors(root_node)), 
+        suc_nodes = sorted(list(graph.successors(root_node)),
                            key=lambda node: graph[root_node][node]["order"])
         if len(suc_nodes) != len(target_suc_nodes):
             return False
         for suc_node, target_suc_node in zip(suc_nodes, target_suc_nodes):
-            if (not target_suc_node.constraints.issubset(suc_node.constraints) or 
-                not self._check_graph_match_rec(wrapper_obj, suc_node, target_suc_node)):
+            if (not target_suc_node.constraints.issubset(suc_node.constraints) or
+                    not self._check_graph_match_rec(wrapper_obj, suc_node, target_suc_node)):
                 return False
         return True
-    
+
     def _calculate_regularized_score(self, graph, score, num_of_root_successors, target_penalty):
         score /= num_of_root_successors
         penalty = max(0, sum((graph.in_degree(node) ** 2 for node in graph)) - target_penalty)
         score -= penalty * self.penalty_coefficient
         return score
-            
+
     def fitness(self, graph, target_graph, target_penalty):
         """
         Fitness function for the genetic algorithm
@@ -140,4 +143,3 @@ class GeneticViewer(Viewer):
                 break
         score = self._calculate_regularized_score(graph, score, len(root_successors), target_penalty)
         return score
-        

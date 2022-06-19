@@ -1,7 +1,10 @@
 from time import perf_counter
 import functools
 import networkx as nx
+from networkx import DiGraph
 from matplotlib import pyplot as plt
+from language.language import Language
+
 
 def timer(func):
     """
@@ -17,10 +20,14 @@ def timer(func):
         func_val = func(*args, **kwargs)
         end = perf_counter()
         total_time = end - start
-        return (func_val, total_time)
+        return func_val, total_time
     return wrapper
 
-def save_graph(graph, filename="temp_graph.png", print=False):
+
+def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = False):
+    """
+    Saves the given graph in a png file, or prints it if print==True
+    """
     pos = nx.planar_layout(graph)
     nx.draw(graph, pos, node_size=400)
     for node in graph.nodes:
@@ -35,3 +42,10 @@ def save_graph(graph, filename="temp_graph.png", print=False):
     else:
         plt.savefig(filename, dpi=600)
     plt.close()
+
+
+def dfs_representation(graph: DiGraph, language: Language) -> list:
+    """
+    Returns a Depth First Search representation of the graph, in which each node is
+    represented by a {len(language.types)}-bit vector of its constraint types
+    """

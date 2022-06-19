@@ -7,6 +7,7 @@ from random import choice
 from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
 
+
 class RandomViewer(Viewer):
     """
     Random viewer class, implementing random selection and application of Rules
@@ -23,18 +24,19 @@ class RandomViewer(Viewer):
         search(rule, obj): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
             a rule's input graph
     """
-    def __init__(self, language: Language, modules: dict=None) -> None:
+
+    def __init__(self, language: Language, modules: dict = None) -> None:
         super().__init__(language)
         self._RuleSearch = RuleSearch()
-        self.modules=modules
-    
+        self.modules = modules
+
     def blob(self, *args) -> PymLiz:
         """
         Creates and returns the PymLiz object
         """
         obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, modules=self.modules)
         return obj
-        
+
     def view(self, obj: PymLiz):
         """
         Returns the object after having changed it according to the viewer's function
@@ -51,10 +53,9 @@ class RandomViewer(Viewer):
             result = obj.run()
             if not isinstance(result, list):
                 return result
-        
+
     def search(self, rule: Rule, obj: PymLiz):
         """
         Iterates through the possible subgraphs (in the form of transform_dicts) that match a rule's input graph
         """
         return self._RuleSearch(rule, obj._graph)
-            
