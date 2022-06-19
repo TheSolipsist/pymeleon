@@ -9,7 +9,7 @@ constraint_types = {"islist": lambda x: isinstance(x, list),
                     "isfloat": lambda x: isinstance(x, float)}
 
 convert_to_nparr = Rule(RuleParser("a", constraints={"a": "islist"}),
-                       RuleParser("np.array(a)", constraints={"np.array": "isnparray"}))
+                        RuleParser("np.array(a)", constraints={"np.array": "isnparray"}))
 
 dot_product = Rule(RuleParser("a", "b", constraints={"a": "isnparray", "b": "isnparray"}),
                    RuleParser("np.sum(a*b)", constraints={"np.sum": ("isnparray", "isfloat")}))
@@ -24,7 +24,7 @@ lang.add_rules(convert_to_nparr, dot_product)
 lang.add_types(constraint_types)
 # Or we could say Language(rules=[convert_to_nparr, dot_product], types=constraint_types)
 
-output = GeneticParser("a", constraints={"a": "isfloat"})
 viewer = GeneticViewer(lang, modules)
 obj = viewer.blob(list1, list2)
+output = GeneticParser("a", constraints={"a": "isfloat"})
 print(obj.view(output))

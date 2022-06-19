@@ -1,6 +1,7 @@
 from language.rule import Rule
 from object.object import PymLiz
 
+
 class Viewer:
     """
     Abstract viewer class
@@ -17,15 +18,15 @@ class Viewer:
         search(rule, obj): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
             a rule's input graph
     """
+
     def __init__(self, language):
         self.language = language
-    
+
     def blob(self, *args):
         raise NotImplementedError("'blob' method not implemented")
-    
+
     def view(self, *args):
         raise NotImplementedError("'view' method not implemented")
-    
+
     def search(self, rule: Rule, obj: PymLiz):
         raise NotImplementedError("'search' method not implemented")
-    

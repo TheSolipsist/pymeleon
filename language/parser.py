@@ -1,11 +1,14 @@
 import networkx as nx
 
+
 class Wrapper:
     """
     Wrapper around any Python object that holds a value
     """
+
     def __init__(self, value) -> None:
         self.value = value
+
 
 class Node(Wrapper):
     """
@@ -15,23 +18,27 @@ class Node(Wrapper):
         value: The node's value
         constraints: List of constraints that the node satisfies
     """
+
     def __init__(self, value, constraints=None) -> None:
         if constraints is None:
             constraints = set()
         self.value = value
         self.constraints = constraints
-        
+
     def copy(self):
         """
         Returns a deep copy of the Node object
         """
         return Node(self.value, constraints=self.constraints.copy())
 
+
 class Expression(Wrapper):
     pass
 
+
 class ParsingError(Exception):
     pass
+
 
 class Parser:
     """
@@ -39,19 +46,20 @@ class Parser:
     """
     # The following operators should be written in reverse order of execution hierarchy (e.g. + is higher than *)
     SUPPORTED_OPERATORS = {
-        "-":    "__pymeleon_sub",
-        "+":    "__pymeleon_add",
-        "@":    "__pymeleon_matmul",
-        "%":    "__pymeleon_mod",
-        "//":   "__pymeleon_floordiv",
-        "*":    "__pymeleon_mul",
-        "/":    "__pymeleon_truediv",
-        "^":    "__pymeleon_power",
+        "-": "__pymeleon_sub",
+        "+": "__pymeleon_add",
+        "@": "__pymeleon_matmul",
+        "%": "__pymeleon_mod",
+        "//": "__pymeleon_floordiv",
+        "*": "__pymeleon_mul",
+        "/": "__pymeleon_truediv",
+        "^": "__pymeleon_power",
     }
     SUPPORTED_OPERATORS_REVERSE = {v: k for k, v in SUPPORTED_OPERATORS.items()}
-    
+
     def __init__(self, *args, constraints=None) -> None:
         raise NotImplementedError("Abstract Parser __init__ should not be called")
+
 
 class RuleParser(Parser):
     """
@@ -66,6 +74,7 @@ class RuleParser(Parser):
         variables_constants: Set containing all variables and constants in the expression
         functions: Set containing all functions in the expression
     """
+
     def __init__(self, *args, constraints=None) -> None:
         self.functions, self.variables_constants = set(), set()
         self._args = args
@@ -98,21 +107,22 @@ class RuleParser(Parser):
             if not isinstance(node_constraints, (list, tuple, set)):
                 constraints[node_value] = (node_constraints,)
         return constraints
-    
+
     def _add_constraints_to_nodes(self, graph, constraints):
         """
         Adds any constraints from the constraints dicts to their corresponding nodes
         Example: {"a": "isint"} -> node_a.constraints == set(..., "isint")
         """
-        for node in tuple(graph.nodes)[1:]: # Skipping "root_node"
+        for node in tuple(graph.nodes)[1:]:  # Skipping "root_node"
             if node.value in constraints:
                 for constraint in constraints[node.value]:
                     node.constraints.add(constraint)
-    
+
     def _generate_graph(self, expression):
         """
         Generates and returns an expression's graph, functions and variables_constants
         """
+
         def generate_subgraph(root_node, arguments_list, functions):
             arg_iter = enumerate(arguments_list)
             functions_found = 0
@@ -132,11 +142,12 @@ class RuleParser(Parser):
         graph.add_node("root_node")
         generate_subgraph("root_node", graph_list, functions)
         return graph, functions, variables_constants
-                    
+
     def _parse_expression(self, expression, functions, variables_constants):
         """
         Parses the expression and returns a graph representation list
         """
+
         def disassemble_expression(expression, functions, variables_constants):
             """
             Populates the variables_constants and functions sets
@@ -156,11 +167,12 @@ class RuleParser(Parser):
                     variables_constants.add(split_item[-1])
                 else:
                     variables_constants.add(item)
-        
+
         def operators_to_functions(expr_obj):
             """
             Changes an expression such that each operator becomes a function (e.g. "func(a+b,b*c)" => "func(add(a,b),mul(b,c))")
             """
+
             def custom_split(expr_obj, i):
                 starting_position = i
                 split_list, args_list, curr_str = [], [], ""
@@ -189,13 +201,15 @@ class RuleParser(Parser):
                                 new_expression = "(" + ",".join(args_list) + ")"
                             else:
                                 new_expression = joined_str
-                            expr_obj.value = expr_obj.value[:starting_position - 1] + new_expression + expr_obj.value[i + 1:]
+                            expr_obj.value = expr_obj.value[:starting_position - 1] + new_expression + expr_obj.value[
+                                                                                                       i + 1:]
                             # The next character to be checked should be the character after ")"
                             return starting_position - 2 + len(new_expression)
                         elif expr_obj.value[starting_position - 2] not in Parser.SUPPORTED_OPERATORS:
                             args_list.append(curr_str)
                             new_expression = "(" + ",".join(args_list) + ")"
-                            expr_obj.value = expr_obj.value[:starting_position - 1] + new_expression + expr_obj.value[i + 1:]
+                            expr_obj.value = expr_obj.value[:starting_position - 1] + new_expression + expr_obj.value[
+                                                                                                       i + 1:]
                             return starting_position - 2 + len(new_expression)
                         else:
                             return i
@@ -218,7 +232,7 @@ class RuleParser(Parser):
                     if item:
                         bracket_list.append(item)
             expr_obj.value = expr_obj.value[bracket_i + 1:]
-        
+
         def parse_brackets_rec(expr_obj):
             """
             Returns a list representation of functions and their arguments in an expression
@@ -233,12 +247,13 @@ class RuleParser(Parser):
                 if expr_obj.value:
                     bracket_contents.append(expr_obj.value)
             return bracket_contents
-        
+
         expr_obj = Expression(expression)
         operators_to_functions(expr_obj)
         disassemble_expression(expr_obj.value, functions, variables_constants)
         brackets_list = parse_brackets_rec(expr_obj)
         return brackets_list, functions, variables_constants
+
 
 class PymLizParser(Parser):
     """
@@ -250,10 +265,11 @@ class PymLizParser(Parser):
     -- Attributes --
         graph: networkx Digraph representing the object
     """
+
     def __init__(self, *args) -> None:
         self.args = args
         self.graph = self._generate_graph_simple(args)
-    
+
     def copy(self):
         return PymLizParser(*self.args)
 
@@ -264,15 +280,17 @@ class PymLizParser(Parser):
         graph = nx.DiGraph()
         graph.add_node("root_node")
         for i, item in enumerate(args):
-            graph.add_edge("root_node", Node(item), order=i+1)
+            graph.add_edge("root_node", Node(item), order=i + 1)
         return graph
-    
+
+
 class GeneticParser(RuleParser):
     """
     Parser to use with Genetic (or other) viewers
     """
+
     def __init__(self, *args, constraints=None):
         super().__init__(*args, constraints=constraints)
-    
+
     def get_graph(self) -> nx.DiGraph:
         return self.graph

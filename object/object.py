@@ -1,4 +1,6 @@
 from language.parser import Parser, PymLizParser
+from language.rule import Rule
+
 
 class PymLiz:
     """
@@ -17,7 +19,7 @@ class PymLiz:
         by using search(rule))
         view(): Calls the viewer's "view" method
     """
-    
+
     def __init__(self, viewer, parser_obj: PymLizParser, constraint_types=None, modules=None) -> None:
         self._parser_obj = parser_obj
         self._graph = parser_obj.graph
@@ -29,22 +31,22 @@ class PymLiz:
             constraint_types = dict()
         self._constraint_types = constraint_types
         self._find_satisfied_constraint_types(constraint_types, parser_obj.graph)
-    
+
     def copy(self):
-        return PymLiz(viewer=self._viewer, 
-                      parser_obj=self._parser_obj.copy(), 
+        return PymLiz(viewer=self._viewer,
+                      parser_obj=self._parser_obj.copy(),
                       constraint_types=self._constraint_types.copy(),
                       modules=self._modules.copy())
-    
+
     def get_graph(self):
         return self._graph
-    
+
     def _find_satisfied_constraint_types(self, constraint_types, graph):
         for constraint_type, constraint in constraint_types.items():
             for node in tuple(graph.nodes)[1:]:
                 if constraint(node.value):
                     node.constraints.add(constraint_type)
-    
+
     def _deparse_component(self, starting_node):
         """
         Deparses a connected component from the object's graph to an evaluatable expression
@@ -57,15 +59,15 @@ class PymLiz:
                 for node in successors:
                     components.append(f"{self._deparse_component(node)}")
                 return Parser.SUPPORTED_OPERATORS_REVERSE[starting_node_value].join(components)
-            else:    
+            else:
                 expression = starting_node_value + "("
                 for node in successors:
                     expression += self._deparse_component(node) + ","
                 return expression[:-1] + ")"
         else:
             return str(starting_node.value)
-    
-    def apply(self, rule, transform_dict, inplace=False):
+
+    def apply(self, rule: Rule, transform_dict: dict, inplace=False):
         """
         Applies the rule to the object, using the specific transform_dict (found by using search(rule)) and, if
         the rule is not to be applied to the graph inplace, return the transformed graph
@@ -75,10 +77,10 @@ class PymLiz:
             return self
         else:
             rule.apply(self._graph, transform_dict, deepcopy_graph=False)
-    
+
     def view(self, *args):
         return self._viewer.view(self, *args)
-        
+
     def run(self):
         """
         Returns the value represented by the object's graph

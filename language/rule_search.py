@@ -5,13 +5,14 @@ Rule search module
 #       Remove root_node and instead use a list of all starting nodes
 from itertools import product, chain
 
+
 class RuleSearch:
     """
     Rule search class for graph transformation
     
     RuleSearch objects are callable and return a generator, yielding subgraphs that match a rule's input graph
     """
-    
+
     def __init__(self) -> None:
         pass
 
@@ -34,7 +35,7 @@ class RuleSearch:
         self._cur_transform_dict[node_input_graph] = node
         for suc_input_node in self._cur_input_graph.successors(node_input_graph):
             order = self._cur_input_graph[node_input_graph][suc_input_node]["order"]
-            target_order = "NOT FOUND" # -1 is used for cases where no order is required
+            target_order = "NOT FOUND"  # -1 is used for cases where no order is required
             for suc_node in self._cur_target_graph.successors(node):
                 if self._cur_target_graph[node][suc_node]["order"] == order:
                     target_order = order
@@ -82,7 +83,8 @@ class RuleSearch:
         # For all combinations of transform_dicts in the connected subgraphs that do not have any overlaps in their chosen
         # nodes, combine the transform_dicts in a single transform_dict and yield it
         for transform_dict_combination in product(*connected_subgraphs):
-            nodes = tuple(chain.from_iterable([transform_dict.values() for transform_dict in transform_dict_combination]))
-            if len(nodes) == len(set(nodes)): # Checking for duplicates
+            nodes = tuple(
+                chain.from_iterable([transform_dict.values() for transform_dict in transform_dict_combination]))
+            if len(nodes) == len(set(nodes)):  # Checking for duplicates
                 full_transform_dict = {k: v for d in transform_dict_combination for k, v in d.items()}
                 yield full_transform_dict
