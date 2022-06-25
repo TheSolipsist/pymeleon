@@ -42,10 +42,3 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
     else:
         plt.savefig(filename, dpi=600)
     plt.close()
-
-
-def dfs_representation(graph: DiGraph, language: Language) -> list:
-    """
-    Returns a Depth First Search representation of the graph, in which each node is
-    represented by a {len(language.types)}-bit vector of its constraint types
-    """

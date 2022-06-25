@@ -3,6 +3,8 @@ from language.rule import Rule
 from viewer.geneticviewer import GeneticViewer
 import numpy as np
 from language.language import Language
+from neural_net.training_generation import dfs_representation
+from time import perf_counter
 
 constraint_types = {"islist": lambda x: isinstance(x, list),
                     "isnparray": lambda x: isinstance(x, np.ndarray),
@@ -26,5 +28,6 @@ lang.add_types(constraint_types)
 
 viewer = GeneticViewer(lang, modules)
 obj = viewer.blob(list1, list2)
-output = GeneticParser("a", constraints={"a": "isfloat"})
-print(obj.view(output))
+print(dfs_representation(obj.get_graph(), lang))
+# output = GeneticParser("a", constraints={"a": "isfloat"})
+# print(obj.view(output))
