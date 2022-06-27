@@ -1,3 +1,6 @@
+"""
+Neural network implementation module
+"""
 import torch
 
 

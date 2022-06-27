@@ -1,3 +1,6 @@
+"""
+Module for training examples generation
+"""
 from language.language import Language
 from language.parser import Node
 from networkx import DiGraph
@@ -5,6 +8,7 @@ import itertools
 from random import choice
 from language.rule import Rule
 from language.rule_search import RuleSearch
+from itertools import combinations_with_replacement
 
 
 def node_representation(node: Node, constraint_types: dict) -> list:
@@ -34,7 +38,7 @@ def dfs_component_representation_rec(graph: DiGraph, root_node: Node, constraint
         visited_nodes.append(node)
         representation.append(graph[root_node][node]["order"])
         representation.extend(node_representation(node, constraint_types))
-        dfs_component_representation_rec(graph, node, constraint_types, representation)
+        dfs_component_representation_rec(graph, node, constraint_types, visited_nodes, representation)
 
 
 def dfs_representation(graph: DiGraph, language: Language) -> list:
@@ -71,7 +75,7 @@ def hash_graph_representation(representation: list, num_constraint_types: int) -
     return graph_hash
 
 
-def rule_representation(rule: Rule, language_rules: list):
+def rule_representation(rule: Rule, language_rules: list) -> list:
     """
     Returns a Rule representation
 
@@ -83,10 +87,41 @@ def rule_representation(rule: Rule, language_rules: list):
     return representation
 
 
-def generate_training_examples(language: Language) -> list:
+def generate_graph_from_constraint_types(constraint_types: tuple[str]):
+    """
+    Generates a graph that is composed of a tuple of constraint types
+    """
+    graph = DiGraph()
+    for constraint_type in constraint_types:
+        # A node's constraints are a set of constraint types
+        graph.add_edge("root_node", Node(constraints={constraint_type}), order=-1)
+    return graph
+
+
+def generate_initial_graph_list(constraint_types: dict):
+    """
+    Generates the initial graph list
+
+    The initial graph list consists of all combinations (with replacement) of the constraint types
+    defined in a language of length 1, 2, ..., len(constraint_types).
+    """
+    initial_graph_list = []
+    for r in range(1, len(constraint_types) + 1):
+        initial_graph_list.extend(map(generate_graph_from_constraint_types,
+                                      combinations_with_replacement(constraint_types, r)))
+    return initial_graph_list
+
+
+def generate_training_examples(language: Language, n_gen: int) -> list:
     """
     Generates training examples for a given language
     """
     rule_search = RuleSearch()
     lang_rules = language.rules
-    constraint_types = language.types
+    graph_list = generate_initial_graph_list(language.types)
+    for i in range(n_gen):
+        pass
+
+
+
+
