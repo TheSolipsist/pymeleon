@@ -3,33 +3,32 @@ from language.rule import Rule
 from viewer.geneticviewer import GeneticViewer
 import numpy as np
 from language.language import Language
-from neural_net.training_generation import dfs_representation
 from time import perf_counter
+from neural_net.neural_net import NeuralNet
 
-constraint_types = {"list": lambda x: isinstance(x, list),
-                    "nparray": lambda x: isinstance(x, np.ndarray),
-                    "float": lambda x: isinstance(x, float)}
+if __name__ == "__main__":
+    constraint_types = {"list": lambda x: isinstance(x, list),
+                        "nparray": lambda x: isinstance(x, np.ndarray),
+                        "float": lambda x: isinstance(x, float)}
 
-convert_to_nparray = Rule(RuleParser("a", constraints={"a": "list"}),
-                          RuleParser("np.array(a)", constraints={"np.array": "nparray"}))
+    convert_to_nparray = Rule(RuleParser("a", constraints={"a": "list"}),
+                              RuleParser("np.array(a)", constraints={"np.array": "nparray"}))
 
-dot_product = Rule(RuleParser("a", "b", constraints={"a": "nparray", "b": "nparray"}),
-                   RuleParser("np.sum(a*b)", constraints={"np.sum": ("nparray", "float")}))
+    dot_product = Rule(RuleParser("a", "b", constraints={"a": "nparray", "b": "nparray"}),
+                       RuleParser("np.sum(a*b)", constraints={"np.sum": ("nparray", "float")}))
 
-modules = {"numpy": "np"}
-    
-list1 = [1, 2, 3]
-list2 = [2, 2, 2]
+    modules = {"numpy": "np"}
 
-lang = Language()
-lang.add_rules(convert_to_nparray, dot_product)
-lang.add_types(constraint_types)
-# Or we could say Language(rules=[convert_to_nparray, dot_product], types=constraint_types)
+    list1 = [1, 2, 3]
+    list2 = [2, 2, 2]
 
-viewer = GeneticViewer(lang, modules)
-obj = viewer.blob(list1, list2)
-print(dfs_representation(obj.get_graph(), lang))
-from neural_net.training_generation import generate_training_examples
-generate_training_examples(lang)
-# output = GeneticParser("a", constraints={"a": "float"})
-# print(obj.view(output))
+    lang = Language()
+    lang.add_rules(convert_to_nparray, dot_product)
+    lang.add_types(constraint_types)
+    # Or we could say Language(rules=[convert_to_nparray, dot_product], types=constraint_types)
+
+    viewer = GeneticViewer(lang, modules)
+    obj = viewer.blob(list1, list2)
+    neural_network = NeuralNet(lang, n_gen=5, n_items=3)
+    # output = GeneticParser("a", constraints={"a": "float"})
+    # print(obj.view(output))

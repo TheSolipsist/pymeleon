@@ -24,7 +24,7 @@ def timer(func):
     return wrapper
 
 
-def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = False):
+def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = False, show_constraints = False):
     """
     Saves the given graph in a png file, or prints it if print==True
     """
@@ -33,6 +33,8 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
     for node in graph.nodes:
         if node == "root_node":
             nx.set_node_attributes(graph, {node: "root_node"}, "name")
+        elif show_constraints:
+            nx.set_node_attributes(graph, {node: (node.value, node.constraints)}, "name")
         else:
             nx.set_node_attributes(graph, {node: node.value}, "name")
     nx.draw_networkx_labels(graph, pos, labels=nx.get_node_attributes(graph, "name"), font_size=7)
