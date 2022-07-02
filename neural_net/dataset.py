@@ -8,7 +8,7 @@ class SequenceDataset(Dataset):
     """
     def __init__(self, data, labels, device=None):
         if device is None:
-            device = torch.device("cuda")
+            device = torch.device("cpu")
         self.data = torch.tensor(data, dtype=torch.float32, device=device)
         self.labels = torch.tensor(labels, dtype=torch.float32, device=device)
 

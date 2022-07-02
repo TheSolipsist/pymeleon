@@ -26,13 +26,16 @@ class NeuralNet:
     -- Methods --
         predict(representation): Returns a prediction on the fitness of the Graph, Rule, Graph sequence
     """
-    def __init__(self, language, n_gen, n_items=None, lr=0.01, num_epochs=3000):
-        super().__init__()
+    def __init__(self, language, n_gen, n_items=None, lr=0.01, num_epochs=3000, device_str=None):
         self.language = language
         self.n_gen = n_gen
         self.n_items = n_items
         self.lr = lr
         self.num_epochs = num_epochs
+        if device_str is None:
+            self.device = torch.device("cpu")
+        else:
+            self.device = torch.device(device_str)
         self._data, self._labels, self._max_length_dict = generate_training_examples(language, n_gen, n_items)
         input_len = len(self._data[0])
         self.net = torch.nn.Sequential(
@@ -49,12 +52,15 @@ class NeuralNet:
         """
         x_train, x_test, y_train, y_test = train_test_split(self._data, self._labels, train_size=0.8)
         # x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, train_size=0.5)
-        train_loader = DataLoader(SequenceDataset(x_train, y_train), batch_size=min(len(y_train), 1024), shuffle=True)
-        # validation_loader = DataLoader(SequenceDataset(x_val, y_val), batch_size=min(len(y_val), 1024), shuffle=False)
-        test_loader = DataLoader(SequenceDataset(x_test, y_test), batch_size=min(len(y_test), 1024), shuffle=False)
+        train_loader = DataLoader(SequenceDataset(x_train, y_train, device=self.device),
+                                  batch_size=min(len(y_train), 1024), shuffle=True)
+        # validation_loader = DataLoader(SequenceDataset(x_val, y_val, device=self.device),
+        #                                batch_size=min(len(y_val), 1024), shuffle=False)
+        test_loader = DataLoader(SequenceDataset(x_test, y_test, device=self.device),
+                                 batch_size=min(len(y_test), 1024), shuffle=False)
 
         net = self.net
-        net.to(torch.device("cuda"))
+        net.to(self.device)
         net.apply(init_weights)
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.SGD(params=net.parameters(), lr=self.lr)
