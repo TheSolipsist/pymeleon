@@ -4,7 +4,7 @@ import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
 from language.language import Language
-
+from neural_net.neural_net import NeuralNet
 
 def timer(func):
     """
@@ -44,3 +44,23 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
     else:
         plt.savefig(filename, dpi=600)
     plt.close()
+
+def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_tests=40):
+    print(f"Starting neural network metric test ({num_tests} tests)")
+    total_metrics = {"train": {"loss": 0, "accuracy": 0, "AUC": 0},
+                     "test": {"loss": 0, "accuracy": 0, "AUC": 0}}
+    for i in range(num_tests):
+        print(f"\rCurrently running test {i + 1}", end="")
+        neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str)
+        curr_metrics = neural_network.metrics
+        for each_set in total_metrics:
+            for metric in total_metrics[each_set]:
+                total_metrics[each_set][metric] += curr_metrics[each_set][metric]
+    print()
+    avg_metrics = {set_name: {metric: (value / num_tests) for metric, value in total_metrics[set_name].items()} for set_name in total_metrics}
+    print("Averaged results:")
+    for set_name in avg_metrics:
+        print(f"{set_name.capitalize()} set:\t", end="")
+        for metric, value in avg_metrics[set_name].items():
+            print(f"{metric}: {value:.3f}   ", end="")
+        print()
