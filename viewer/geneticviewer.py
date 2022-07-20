@@ -6,6 +6,7 @@ from language.language import Language
 from random import choice
 from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
+import math
 
 
 class RecursionObject:
@@ -95,7 +96,7 @@ class GeneticViewer(Viewer):
         return self._RuleSearch(rule, obj._graph)
 
     def _calculate_target_penalty(self, target_graph):
-        return sum((target_graph.in_degree(node) ** 2 for node in target_graph))
+        return math.log(sum((target_graph.in_degree(node) ** 2 for node in target_graph)))
 
     def _check_graph_match_rec(self, wrapper_obj: RecursionObject, root_node, target_root_node):
         graph = wrapper_obj.graph

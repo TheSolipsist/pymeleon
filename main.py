@@ -30,6 +30,7 @@ if __name__ == "__main__":
     viewer = GeneticViewer(lang, modules)
     obj = viewer.blob(list1, list2)
 
-    neural_network = NeuralNet(lang, n_gen=5, n_items=3, device_str="cuda")
+    from utilities.util_funcs import test_neural_net
+    test_neural_net(lang, device_str="cuda", num_tests=3)
     # output = GeneticParser("a", constraints={"a": "float"})
     # print(obj.view(output))
