@@ -45,13 +45,15 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
         plt.savefig(filename, dpi=600)
     plt.close()
 
-def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_tests=40):
+def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_tests=40,
+                    lr=0.0001, num_epochs=100, batch_size=2**16):
     print(f"Starting neural network metric test ({num_tests} tests)")
     total_metrics = {"train": {"loss": 0, "accuracy": 0, "AUC": 0},
                      "test": {"loss": 0, "accuracy": 0, "AUC": 0}}
     for i in range(num_tests):
         print(f"\rCurrently running test {i + 1}", end="")
-        neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str)
+        neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str,
+                                   lr=lr, num_epochs=num_epochs, batch_size=batch_size)
         curr_metrics = neural_network.metrics
         for each_set in total_metrics:
             for metric in total_metrics[each_set]:

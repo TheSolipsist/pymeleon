@@ -78,9 +78,9 @@ class NeuralNet:
         """
         self._data, self._labels, self._input_len = generate_training_examples(language, n_gen, n_items)
         self.net = torch.nn.Sequential(
-            torch.nn.Linear(self._input_len * 3, 1000),
+            torch.nn.Linear(self._input_len * 3, 100),
             torch.nn.ReLU(),
-            torch.nn.Linear(1000, 1),
+            torch.nn.Linear(100, 1),
             torch.nn.Sigmoid()
         ).to(self.device)
         self.net.apply(NeuralNet.init_weights)
