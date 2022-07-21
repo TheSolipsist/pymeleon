@@ -62,10 +62,13 @@ class NeuralNet:
             net = net.to(torch.device("cpu"))
         with torch.no_grad():
             y_hat = net(x)
-            loss = criterion(y_hat.squeeze().to(torch.float32), y.squeeze().to(torch.float32))
+            loss = criterion(y_hat, y)
             predictions = (y_hat.squeeze() > 0.5) == y.squeeze()
             accuracy = predictions.sum() / predictions.numel()
-            auc = roc_auc_score(y, net(x))
+            try:
+                auc = roc_auc_score(y, y_hat)
+            except ValueError:
+                auc = accuracy
         if print_results:
             if set_name:
                 print(f"{set_name}: ", end="")
@@ -92,28 +95,50 @@ class NeuralNet:
         test_set = SequenceDataset(x_test, y_test, device=self.device)
         # validation_set = SequenceDataset(x_val, y_val, device=self.device)
         return train_set, test_set
-        
+    
+    def _calculate_metrics(self, train_set: SequenceDataset, test_set: SequenceDataset):
+        """
+        Calculates the loss and AUC of the neural network for the current epoch
+        """
+        net = self.net
+        criterion = self.criterion
+        y_hat_train = net(train_set.x)
+        y_hat_test = net(test_set.x)
+        loss_train = criterion(y_hat_train, train_set.y)
+        loss_test = criterion(y_hat_test, test_set.y)
+        auc_train = roc_auc_score(train_set.y, y_hat_train)
+        auc_test = roc_auc_score(test_set.y, y_hat_test)
+        return loss_train, loss_test, auc_train, auc_test
+    
     def _train(self, train_set, test_set) -> None:
         """
         Starts training the neural network on the generated training sample
         """
-        train_loader = DataLoader(train_set, batch_size=min(len(train_set), 2**16), shuffle=True)
+        train_loader = DataLoader(train_set, batch_size=min(len(train_set), self.batch_size), shuffle=True)
         # validation_loader = DataLoader(validation_set, batch_size=min(len(validation_set), 1024), shuffle=False)
         net = self.net
         criterion = self.criterion
         optimizer = self.optimizer
-        net.train()
+        metrics_epoch = torch.empty(size=(self.num_epochs, 4), dtype=torch.float32, requires_grad=False)
         for epoch in range(self.num_epochs):
+            net.train()
             # print(f"\rEpoch: {epoch + 1}/{self.num_epochs}", end='')
             for x, y in train_loader:
                 optimizer.zero_grad()
                 y_hat = net(x)
-                loss = criterion(y_hat.squeeze().to(torch.float32), y.squeeze().to(torch.float32))
+                loss = criterion(y_hat, y)
                 loss.backward()
                 optimizer.step()
+            with torch.no_grad():
+                metrics = self._calculate_metrics(train_set, test_set)
+                metrics_epoch[epoch][0] = metrics[0]
+                metrics_epoch[epoch][1] = metrics[1]
+                metrics_epoch[epoch][2] = metrics[2]
+                metrics_epoch[epoch][3] = metrics[3]
         # print()
         train_metrics = self._evaluate_model(train_set)
         test_metrics = self._evaluate_model(test_set)
+        print(f"Final auc: {metrics_epoch[-1][3]} compared to {test_metrics['AUC']}")
         return {"train": train_metrics, "test": test_metrics}
     
     def predict(self, graph_before: DiGraph, graph_after: DiGraph, graph_final: DiGraph) -> float:
@@ -125,4 +150,4 @@ class NeuralNet:
                 raise NeuralNetError(f"Graph {graph} has more than allowed nodes ({len(graph_repr)}, \
                                        maximum allowed are {self._input_len})")
             representation.extend(graph_repr + (self._input_len - len(graph_repr)) * [0])
-        return self.net(representation)
+        return self.net(torch.tensor(representation, dtype=torch.float32, device=self.device))
