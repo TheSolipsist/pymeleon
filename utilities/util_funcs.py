@@ -4,7 +4,10 @@ import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
 from language.language import Language
-from neural_net.neural_net import NeuralNet
+from neural_net.neural_net import NeuralNet, NeuralNetError
+from neural_net.metrics import Metrics
+import torch
+
 
 def timer(func):
     """
@@ -46,23 +49,56 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
     plt.close()
 
 def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_tests=40,
-                    lr=0.0001, num_epochs=100, batch_size=2**16):
+                    lr=0.0001, num_epochs=100, batch_size=2**16, **kwargs):
     print(f"Starting neural network metric test ({num_tests} tests)")
-    total_metrics = {"train": {"loss": 0, "accuracy": 0, "AUC": 0},
-                     "test": {"loss": 0, "accuracy": 0, "AUC": 0}}
+    general_metrics = Metrics().metric_funcs
+    total_metrics = {"train": {metric_str: 0 for metric_str in general_metrics},
+                     "test": {metric_str: 0 for metric_str in general_metrics}}
+    bad_tests = 0
     for i in range(num_tests):
         print(f"\rCurrently running test {i + 1}", end="")
-        neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str,
-                                   lr=lr, num_epochs=num_epochs, batch_size=batch_size)
-        curr_metrics = neural_network.metrics
-        for each_set in total_metrics:
-            for metric in total_metrics[each_set]:
-                total_metrics[each_set][metric] += curr_metrics[each_set][metric]
+        try:
+            neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str,
+                                       lr=lr, num_epochs=num_epochs, batch_size=batch_size, **kwargs)
+        except NeuralNetError as e:
+            print(f"\nERROR: {e}\nThis test will not be counted, continuing with next one")
+            bad_tests += 1
+            continue
+        metrics_epoch = neural_network.metrics_epoch
+        _plot_results(metrics_epoch, i)
+        curr_metrics = {dataset_str: {metric_str: metric[-1] for metric_str, metric in metrics.items()}
+                                      for dataset_str, metrics in metrics_epoch.items()}
+        for dataset_str in total_metrics:
+            for metric in total_metrics[dataset_str]:
+                total_metrics[dataset_str][metric] += curr_metrics[dataset_str][metric]
     print()
-    avg_metrics = {set_name: {metric: (value / num_tests) for metric, value in total_metrics[set_name].items()} for set_name in total_metrics}
+    avg_metrics = {set_name: {metric: (value / (num_tests - bad_tests)) for metric, value in total_metrics[set_name].items()} for set_name in total_metrics}
     print("Averaged results:")
     for set_name in avg_metrics:
         print(f"{set_name.capitalize()} set:\t", end="")
         for metric, value in avg_metrics[set_name].items():
             print(f"{metric}: {value:.3f}   ", end="")
         print()
+
+def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = None):
+    """
+    Plots the metrics that were recorded during the training of the neural network
+
+    Args:
+        ``metrics_epoch`` (dict[str, dict[str, torch.Tensor]]): Dictionary containing the recorded metrics
+                Example: metrics_epoch["train"]["loss"][3] gives the training loss at the 4th epoch
+    """
+    i = str(i) if i is not None else ""
+    general_metrics = Metrics().metric_funcs
+    for metric_str in general_metrics:
+        fig, ax = plt.subplots()
+        ax.set_title(f"{metric_str}")
+        ax.set_ylabel(f"{metric_str}")
+        ax.set_xlabel(f"Epoch")
+        for dataset_str in metrics_epoch:
+            ax.plot(metrics_epoch[dataset_str][metric_str], label=f"{dataset_str} set")
+        ax.legend()
+        # plt.show()
+        fig.savefig(f"results/{metric_str}{i}.png", dpi=300)
+        plt.close(fig)
+    

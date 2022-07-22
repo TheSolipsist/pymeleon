@@ -1,13 +1,18 @@
 """
 Neural network implementation module
 """
+
+# pymeleon modules
 from language.language import Language
 from neural_net.training_generation import dfs_representation, generate_training_examples
+from neural_net.dataset import SequenceDataset
+from neural_net.metrics import Metrics
+# torch modules
 import torch
 from torch.utils.data import DataLoader
+# scikit-learn modules
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
-from neural_net.dataset import SequenceDataset
+# networkx modules
 from networkx import DiGraph
 
 
@@ -20,126 +25,118 @@ class NeuralNet:
     Neural network implementation for usage with the Genetic Viewer as its fitness function
 
     -- Parameters --
-        language: Language to be used
-        n_gen: Number of consecutive rules to be applied to the initial graphs when generating
+        ``language``: Language to be used
+        ``n_gen``: Number of consecutive rules to be applied to the initial graphs when generating
             the training data
-
+        ``n_items``: Maximum number of items to create initial graphs from when generating the training data
+        ``lr``: Learning rate
+        ``num_epochs``: Number of epochs to iterate through while training the network
+        ``batch_size``: The batch size to use while iterating through the training and testing data
+        ``num_classes``: The number of labels for each data instance
+        ``device_str``: The name of the device on which to keep the model and do the training
+        
     -- Methods --
-        predict(graph_before, graph_after, graph_final): Returns a prediction on the fitness of the
+        ``predict``(graph_before, graph_after, graph_final): Returns a prediction on the fitness of the
         (graph_before, graph_after, graph_final) sequence
     """
-
-    def __init__(self, language: Language, n_gen: int, n_items: int = None, lr: float = 0.0001, 
-                 num_epochs: int = 400, device_str: str = None, batch_size: int = 2**16) -> None:
+    def __init__(
+                 self,
+                 language: Language,
+                 n_gen: int = 5,
+                 n_items: int = None,
+                 lr: float = 0.0001, 
+                 num_epochs: int = 400,
+                 batch_size: int = 2**16,
+                 num_classes: int = 1,
+                 device_str: str = "cpu"
+                 ) -> None:
         self.language = language
         self.n_gen = n_gen
         self.n_items = n_items
         self.lr = lr
         self.num_epochs = num_epochs
-        if device_str is None:
-            self.device = torch.device("cpu")
-        else:
-            self.device = torch.device(device_str)
+        self.device = torch.device(device_str)
         self.batch_size = batch_size
-        train_set, test_set = self._prepare_for_training(language, n_gen, n_items)
-        self.metrics = self._train(train_set, test_set)
+        self.metric_funcs = Metrics(num_classes=num_classes).metric_funcs
+        datasets = self._prepare_for_training(language, n_gen, n_items)
+        self._train(datasets)
 
-    def init_weights(m):
+    def _init_weights(m):
         if isinstance(m, torch.nn.Linear):
             torch.nn.init.xavier_normal_(m.weight)
             torch.nn.init.constant_(m.bias, 0)
-        
-    def _evaluate_model(self, dataset, set_name=None, print_results=False) -> tuple[float, float]:
-        """Returns evaluation metrics for the model (loss, accuracy, auc) on a DataSet"""
-        net = self.net
-        net.eval()
-        criterion = self.criterion
-        x = dataset.x
-        y = dataset.y
-        if self.device != torch.device("cpu"):
-            x = x.to(torch.device("cpu"))
-            y = y.to(torch.device("cpu"))
-            net = net.to(torch.device("cpu"))
-        with torch.no_grad():
-            y_hat = net(x)
-            loss = criterion(y_hat, y)
-            predictions = (y_hat.squeeze() > 0.5) == y.squeeze()
-            accuracy = predictions.sum() / predictions.numel()
-            try:
-                auc = roc_auc_score(y, y_hat)
-            except ValueError:
-                auc = accuracy
-        if print_results:
-            if set_name:
-                print(f"{set_name}: ", end="")
-            print(f"Loss: {loss:.3f}, Accuracy: {accuracy:.3f}, AUC: {auc:.3f}")
-        return {"loss": loss, "accuracy": accuracy, "AUC": auc}
 
     def _prepare_for_training(self, language: Language, n_gen: int, n_items: int = None) -> None:
         """
         Generates training examples and initializes the network for training
         """
         self._data, self._labels, self._input_len = generate_training_examples(language, n_gen, n_items)
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(self._input_len * 3, 100),
+        self.model = torch.nn.Sequential(
+            torch.nn.Linear(self._input_len * 3, 200),
             torch.nn.ReLU(),
-            torch.nn.Linear(100, 1),
+            torch.nn.Linear(200, 1),
             torch.nn.Sigmoid()
         ).to(self.device)
-        self.net.apply(NeuralNet.init_weights)
-        self.criterion = torch.nn.BCELoss()
-        self.optimizer = torch.optim.Adam(params=self.net.parameters(), lr=self.lr)
+        self.model.apply(NeuralNet._init_weights)
+        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.lr)
         x_train, x_test, y_train, y_test = train_test_split(self._data, self._labels, train_size=0.8)
         # x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, train_size=0.5)
         train_set = SequenceDataset(x_train, y_train, device=self.device)
         test_set = SequenceDataset(x_test, y_test, device=self.device)
+        if ((train_set.y.all() or not train_set.y.any()) or
+            (test_set.y.all() or not test_set.y.any())):
+            raise NeuralNetError("Only 1 label exists in either the training or the test set")
         # validation_set = SequenceDataset(x_val, y_val, device=self.device)
-        return train_set, test_set
+        return {"train": train_set, 
+                "test": test_set}
     
-    def _calculate_metrics(self, train_set: SequenceDataset, test_set: SequenceDataset):
+    def _calculate_metrics(self, datasets: dict[str, SequenceDataset]):
         """
-        Calculates the loss and AUC of the neural network for the current epoch
+        Returns the metrics of the model for the given datasets
         """
-        net = self.net
-        criterion = self.criterion
-        y_hat_train = net(train_set.x)
-        y_hat_test = net(test_set.x)
-        loss_train = criterion(y_hat_train, train_set.y)
-        loss_test = criterion(y_hat_test, test_set.y)
-        auc_train = roc_auc_score(train_set.y, y_hat_train)
-        auc_test = roc_auc_score(test_set.y, y_hat_test)
-        return loss_train, loss_test, auc_train, auc_test
+        metrics = {dataset_str: dict() for dataset_str in datasets}
+        for dataset_str, dataset in datasets.items():
+            y_hat = self.model(dataset.x)
+            for metric_str, metric in self.metric_funcs.items():
+                metrics[dataset_str][metric_str] = metric(y_hat, dataset.y)
+        return metrics
     
-    def _train(self, train_set, test_set) -> None:
+    def _train(self, datasets: dict[str, SequenceDataset]) -> None:
         """
-        Starts training the neural network on the generated training sample
+        Starts training the neural network
+
+        Args:
+            ``datasets`` (dict[str, SequenceDataset]): Dictionary mapping the name of the split dataset to the dataset
+                    Example: datasets = {"train": train_set,
+                                         "validation": validation_set,
+                                         "test": test_set}
         """
-        train_loader = DataLoader(train_set, batch_size=min(len(train_set), self.batch_size), shuffle=True)
-        # validation_loader = DataLoader(validation_set, batch_size=min(len(validation_set), 1024), shuffle=False)
-        net = self.net
-        criterion = self.criterion
+        train_loader = DataLoader(datasets["train"], batch_size=min(len(datasets["train"]), self.batch_size), shuffle=True)
+        # validation_loader = DataLoader(datasets["validation"], batch_size=min(len(datasets["validation"]), self.batch_size), shuffle=False)
+        model = self.model
         optimizer = self.optimizer
-        metrics_epoch = torch.empty(size=(self.num_epochs, 4), dtype=torch.float32, requires_grad=False)
+        metrics_epoch = {dataset_str: {metric : torch.empty(self.num_epochs, dtype=torch.float32, requires_grad=False)
+                                       for metric in self.metric_funcs}
+                         for dataset_str in datasets}
         for epoch in range(self.num_epochs):
-            net.train()
+            model.train()
             # print(f"\rEpoch: {epoch + 1}/{self.num_epochs}", end='')
             for x, y in train_loader:
                 optimizer.zero_grad()
-                y_hat = net(x)
-                loss = criterion(y_hat, y)
+                y_hat = model(x)
+                loss = self.metric_funcs["loss"](y_hat, y)
                 loss.backward()
                 optimizer.step()
+            model.eval()
             with torch.no_grad():
-                metrics = self._calculate_metrics(train_set, test_set)
-                metrics_epoch[epoch][0] = metrics[0]
-                metrics_epoch[epoch][1] = metrics[1]
-                metrics_epoch[epoch][2] = metrics[2]
-                metrics_epoch[epoch][3] = metrics[3]
+                for dataset_str, metrics in self._calculate_metrics(datasets).items():
+                    for metric_str, metric in metrics.items():
+                        metrics_epoch[dataset_str][metric_str][epoch] = metric
         # print()
-        train_metrics = self._evaluate_model(train_set)
-        test_metrics = self._evaluate_model(test_set)
-        print(f"Final auc: {metrics_epoch[-1][3]} compared to {test_metrics['AUC']}")
-        return {"train": train_metrics, "test": test_metrics}
+        if self.device.type == "cuda":
+            torch.cuda.synchronize(self.device)
+        self.metrics_epoch = metrics_epoch 
+        
     
     def predict(self, graph_before: DiGraph, graph_after: DiGraph, graph_final: DiGraph) -> float:
         representation = []
@@ -150,4 +147,6 @@ class NeuralNet:
                 raise NeuralNetError(f"Graph {graph} has more than allowed nodes ({len(graph_repr)}, \
                                        maximum allowed are {self._input_len})")
             representation.extend(graph_repr + (self._input_len - len(graph_repr)) * [0])
-        return self.net(torch.tensor(representation, dtype=torch.float32, device=self.device))
+        self.model.eval()
+        with torch.no_grad():
+            return self.model(torch.tensor(representation, dtype=torch.float32, device=self.device)).item()

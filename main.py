@@ -31,6 +31,6 @@ if __name__ == "__main__":
     obj = viewer.blob(list1, list2)
 
     from utilities.util_funcs import test_neural_net
-    test_neural_net(lang, device_str="cpu", num_tests=20, num_epochs=100, lr=0.001)
+    test_neural_net(lang, device_str="cuda", num_tests=10, num_epochs=500, lr=0.0001)
     # output = GeneticParser("a", constraints={"a": "float"})
     # print(obj.view(output))
