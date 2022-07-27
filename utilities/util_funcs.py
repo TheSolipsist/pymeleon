@@ -73,12 +73,15 @@ def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_te
                 total_metrics[dataset_str][metric] += curr_metrics[dataset_str][metric]
     print()
     avg_metrics = {set_name: {metric: (value / (num_tests - bad_tests)) for metric, value in total_metrics[set_name].items()} for set_name in total_metrics}
-    print("Averaged results:")
+    to_print = f"Averaged results from {num_tests} tests:\n"
     for set_name in avg_metrics:
-        print(f"{set_name.capitalize()} set:\t", end="")
+        to_print += f"{set_name.capitalize()} set:\t"
         for metric, value in avg_metrics[set_name].items():
-            print(f"{metric}: {value:.3f}   ", end="")
-        print()
+            to_print += f"{metric}: {value:.3f}   "
+        to_print += "\n"
+    with open("results/final_results.txt", "w") as results_file:
+        results_file.write(to_print)
+        print(to_print)
 
 def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = None):
     """
@@ -99,6 +102,6 @@ def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = No
             ax.plot(metrics_epoch[dataset_str][metric_str], label=f"{dataset_str} set")
         ax.legend()
         # plt.show()
-        fig.savefig(f"results/{metric_str}{i}.png", dpi=300)
+        fig.savefig(f"results/{metric_str}_{i}.png", dpi=150)
         plt.close(fig)
     

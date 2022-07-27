@@ -1,6 +1,6 @@
 from language.parser import GeneticParser, RuleParser
 from language.rule import Rule
-from viewer.geneticviewer import GeneticViewer
+from viewer.genetic_viewer import GeneticViewer
 import numpy as np
 from language.language import Language
 from time import perf_counter
@@ -31,6 +31,6 @@ if __name__ == "__main__":
     obj = viewer.blob(list1, list2)
 
     from utilities.util_funcs import test_neural_net
-    test_neural_net(lang, device_str="cuda", num_tests=10, num_epochs=500, lr=0.0001)
+    test_neural_net(lang, device_str="cuda", num_tests=100, num_epochs=1000, lr=0.0001)
     # output = GeneticParser("a", constraints={"a": "float"})
     # print(obj.view(output))

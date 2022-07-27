@@ -19,7 +19,8 @@ def node_representation(node: Node, constraint_types: dict) -> list:
     """
     Returns a node representation
 
-    A node is represented by a (len(language.types) + 1)-int vector of its order and constraint types
+    A node is represented by a (len(language.types) + 1)-int vector of its constraint types and its order (which is
+    added in the dfs_component_representation_rec function)
     """
     representation = []
     for constraint_type in constraint_types:
@@ -79,6 +80,17 @@ def hash_graph_representation(representation: list, num_constraint_types: int) -
     return graph_hash
 
 
+def top_nodes_representation(graph: DiGraph, language: Language) -> list:
+    """
+    Returns a representation of the graph if it was composed only of its top nodes
+    """
+    top_nodes_graph = DiGraph()
+    top_nodes_graph.add_node("root_node")
+    for node in graph.successors("root_node"):
+        top_nodes_graph.add_edge("root_node", node.copy(), order=-1)
+    return dfs_representation(top_nodes_graph, language)
+
+
 def create_rule_representations(language_rules: list[Rule]) -> dict:
     """
     Creates the Rule representations dictionary
@@ -121,53 +133,41 @@ def generate_initial_graph_list(constraint_types: dict, n_items: int = None):
     return initial_graph_list
 
 
+def add_representations_to_training_examples(training_examples: dict[str, list],
+                                             graph_before_repr: list,
+                                             graph_after_repr: list,
+                                             graph_final_repr: list, 
+                                             label: bool):
+    """
+    Adds the representations of graphs to the training examples
+    """
+    training_examples["graph_before"].append(graph_before_repr)
+    training_examples["graph_after"].append(graph_after_repr)
+    training_examples["graph_final"].append(graph_final_repr)
+    training_examples["label"].append(label)
 
-def apply_rules(graph: DiGraph, chosen_rules: list[Rule], rule_search: RuleSearch) -> list:
+def add_sequence_to_training_examples(sequence: list, training_examples: dict[str, list], language: Language, label: bool, 
+                                      add_simple: bool = True):
     """
-    Applies a list of rules (with random transform_dicts) to a graph
-    """
-    sequence = [graph]
-    for rule in chosen_rules:
-        transform_dicts = tuple(rule_search(rule, graph))
-        if not transform_dicts:
-            continue
-        chosen_transform_dict = choice(transform_dicts)
-        graph = rule.apply(graph, chosen_transform_dict)
-        sequence.append(graph)
-    return sequence
-    
-    
-def generate_sequence(initial_graph: DiGraph, chosen_rules: list[Rule], chosen_bad_rules: list[Rule],
-                      rule_search: RuleSearch) -> tuple[list, list]:
-    """
-    Generates a (Graph_1, Graph_2, ..., Graph_final) positive sequence based on an initial graph and a sequence of rules,
-    along with its negative sequence which results from the application of a different sequence of rules but has the same Graph_final
-
-    If no rules were applied, returns None for the corresponding sequence
-    """
-    positive_sequence = apply_rules(initial_graph, chosen_rules, rule_search)
-    negative_sequence = apply_rules(initial_graph, chosen_bad_rules, rule_search)
-    negative_sequence[-1] = positive_sequence[-1]
-    if len(positive_sequence) == 1:
-        return (None, None)
-    elif len(negative_sequence) == 1:
-        return positive_sequence, None
-    return positive_sequence, negative_sequence
-
-
-def add_sequence_to_training_examples(sequence: list, training_examples: dict[str, list], language: Language, label: bool):
-    """
-    Adds a sequence of (Graph_1, Rule_1, Graph_2, ..., Graph_final) in the representation required to be used in a neural network to the
+    Adds a sequence of (Graph_1, Graph_2, ..., Graph_final) in the representation required to be used in a neural network to the
     training examples dictionary
+    
+    For each representation of graphs, another representation is added in which the graph_final's representation is changed so that
+    the graph is composed only of its top nodes (in this way, the neural network's predictions can also work if only the top nodes of
+    the target graph are provided)
     """
-    graph_before_repr = dfs_representation(sequence[0], language)
-    graph_final_repr = dfs_representation(sequence[-1], language)
-    for i in range(1, len(sequence) - 1):
-        graph_after_repr = dfs_representation(sequence[i], language)
-        training_examples["graph_before"].append(graph_before_repr)
-        training_examples["graph_after"].append(graph_after_repr)
-        training_examples["graph_final"].append(graph_final_repr)
-        training_examples["label"].append(label)
+    sequence_representations = [dfs_representation(graph, language) for graph in sequence]
+    if add_simple:
+        sequence_representations_top_nodes = [top_nodes_representation(graph, language) for graph in sequence]
+    graph_before_repr = sequence_representations[0]
+    for i in range(1, len(sequence_representations)):
+        graph_after_repr = sequence_representations[i]
+        for j in range(i + 1, len(sequence)):
+            add_representations_to_training_examples(training_examples, 
+                                                     graph_before_repr, graph_after_repr, sequence_representations[j], label)
+            if add_simple:
+                add_representations_to_training_examples(training_examples, 
+                                                         graph_before_repr, graph_after_repr, sequence_representations_top_nodes[j], label)
         graph_before_repr = graph_after_repr
 
 
@@ -216,48 +216,134 @@ def remove_duplicates(data: list[list[int]], labels: list[int]):
         del labels[index]
 
 
-def generate_training_examples(language: Language, n_gen: int = 5, n_items: int = None) -> tuple[list, list, dict]:
+class TrainingGeneration:
     """
-    Generates training examples for a given language
-
-    -- Arguments --
-        language: The language for which to generate training examples
-        n_gen: The number of rules to apply to each initial graph of constraint types while generating training
-            sequences
-        n_items: The range of items to use when generating the initial graphs of constraint types (graphs of
-            range(n_items) nodes will be generated). If not given, defaults to len(language.constraint_types)
-
-    -- Returns --
-        data: The list containing the training examples
-        labels: The list containing the training labels
-        max_length: The max length for "graph_before", "graph_after", "graph_final" representations
-    """
-    rule_search = RuleSearch()
-    rules = language.rules
-    initial_graph_list = generate_initial_graph_list(language.types, n_items)
-    training_examples = {"graph_before": [],    # Representations of the graphs before the Rule application
-                         "graph_after": [],     # Representations of the graphs after the Rule application
-                         "graph_final": [],     # Representations of the graphs after all Rule applications
-                         "label": []}           # 1 if positive training example, 0 if negative
+    ### Abstract training generation class
     
-    for graph in initial_graph_list:
-        chosen_rules = choices(rules, k=n_gen)
-        chosen_negative_rules = choices(rules, k=n_gen)
-        while chosen_negative_rules == chosen_rules:
+    #### Abstract methods:
+        ``generate_training_examples(language, n_gen, items)``: Generates training examples
+    """
+    def __init__(self):
+        pass
+    
+    def generate_training_examples(self):
+        raise NotImplementedError("'generate_training_examples' method not implemented")
+    
+
+class TrainingGenerationRandom(TrainingGeneration):
+    """
+    ### Training generation class for quick generation of few samples through random choice of rules and \
+        transformation dictionaries
+    
+    #### Methods:
+        ``generate_training_examples(language, n_gen, items)``: Returns the (data, labels, max_length) tuple \
+                                                                of the training data 
+    """
+    def __init__(self):
+        pass
+    
+    def apply_rules_random(self, graph: DiGraph, chosen_rules: list[Rule], rule_search: RuleSearch) -> list:
+        """
+        Applies a list of rules (with random transform_dicts) to a graph
+        """
+        sequence = [graph]
+        for rule in chosen_rules:
+            transform_dicts = tuple(rule_search(rule, graph))
+            if not transform_dicts:
+                continue
+            chosen_transform_dict = choice(transform_dicts)
+            graph = rule.apply(graph, chosen_transform_dict)
+            sequence.append(graph)
+        return sequence
+        
+    def generate_sequence_random(self, initial_graph: DiGraph, chosen_rules: list[Rule], chosen_bad_rules: list[Rule],
+                                 rule_search: RuleSearch) -> tuple[list, list]:
+        """
+        Generates a (Graph_1, Graph_2, ..., Graph_final) positive sequence based on an initial graph and a sequence of rules, \
+        along with its negative sequence which results from the application of a different sequence of rules but has the same Graph_final
+
+        If no rules were applied, returns None for the corresponding sequence
+        """
+        positive_sequence = self.apply_rules_random(initial_graph, chosen_rules, rule_search)
+        negative_sequence = self.apply_rules_random(initial_graph, chosen_bad_rules, rule_search)
+        negative_sequence[-1] = positive_sequence[-1]
+        if len(positive_sequence) == 1:
+            return (None, None)
+        elif len(negative_sequence) == 1:
+            return positive_sequence, None
+        return positive_sequence, negative_sequence
+    
+    def generate_training_examples(self, language: Language, n_gen: int = 5, n_items: int = None) -> tuple[list, list, dict]:
+        """
+        Generates training examples for a given language
+
+        -- Arguments --
+            language: The language for which to generate training examples
+            n_gen: The number of rules to apply to each initial graph of constraint types while generating training \
+                sequences
+            n_items: The range of items to use when generating the initial graphs of constraint types (graphs of \
+                range(n_items) nodes will be generated). If not given, defaults to len(language.constraint_types)
+
+        -- Returns --
+            data: The list containing the training examples
+            labels: The list containing the training labels
+            max_length: The max length for "graph_before", "graph_after", "graph_final" representations
+        """
+        rule_search = RuleSearch()
+        rules = language.rules
+        initial_graph_list = generate_initial_graph_list(language.types, n_items)
+        training_examples = {"graph_before": [],    # Representations of the graphs before the Rule application
+                             "graph_after": [],     # Representations of the graphs after the Rule application
+                             "graph_final": [],     # Representations of the graphs after all Rule applications
+                             "label": []}           # 1 if positive training example, 0 if negative
+        for graph in initial_graph_list:
+            chosen_rules = choices(rules, k=n_gen)
             chosen_negative_rules = choices(rules, k=n_gen)
-        positive_sequence, negative_sequence = generate_sequence(graph, chosen_rules, chosen_negative_rules,
-                                                                 rule_search)
-        if positive_sequence:
-            add_sequence_to_training_examples(positive_sequence, training_examples, language, label=1)
-        if negative_sequence:
-            add_sequence_to_training_examples(negative_sequence, training_examples, language, label=0)
-    if not training_examples["graph_before"]:
-        raise TrainingGenerationError("Training examples could not be generated")
-    max_length = fix_length_training_examples(training_examples)
-    data = [graph_before + graph_after + graph_final for graph_before, graph_after, graph_final in
-            zip(training_examples["graph_before"],
-                training_examples["graph_after"],
-                training_examples["graph_final"])]
-    labels = training_examples["label"]
-    remove_duplicates(data, labels)
-    return data, labels, max_length
+            while chosen_negative_rules == chosen_rules:
+                chosen_negative_rules = choices(rules, k=n_gen)
+            positive_sequence, negative_sequence = self.generate_sequence_random(graph, chosen_rules, chosen_negative_rules,
+                                                                                 rule_search)
+            if positive_sequence:
+                add_sequence_to_training_examples(positive_sequence, training_examples, language, label=1, add_simple=True)
+            if negative_sequence:
+                add_sequence_to_training_examples(negative_sequence, training_examples, language, label=0, add_simple=True)
+        if not training_examples["graph_before"]:
+            raise TrainingGenerationError("Training examples could not be generated")
+        max_length = fix_length_training_examples(training_examples)
+        data = [graph_before + graph_after + graph_final for graph_before, graph_after, graph_final in
+                zip(training_examples["graph_before"],
+                    training_examples["graph_after"],
+                    training_examples["graph_final"])]
+        labels = training_examples["label"]
+        remove_duplicates(data, labels)
+        return data, labels, max_length
+
+
+class TrainingGenerationFull(TrainingGeneration):
+    """
+    ### Training generation class for full (and slow) generation of training examples, utilizing all transform dicts
+    that are found for a specific graph and Rule
+
+    #### Methods:
+        ``generate_training_examples(language, n_gen, items)``: Returns the (data, labels, max_length) tuple of the training data 
+    """
+    def __init__(self):
+        pass
+    
+    def generate_training_examples(self, language: Language, n_gen: int = 5, n_items: int = None) -> tuple[list, list, dict]:
+        """
+        Generates training examples for a given language
+
+        -- Arguments --
+            language: The language for which to generate training examples
+            n_gen: The number of rules to apply to each initial graph of constraint types while generating training \
+                   sequences
+            n_items: The range of items to use when generating the initial graphs of constraint types (graphs of \
+                     range(n_items) nodes will be generated). If not given, defaults to len(language.constraint_types)
+
+        -- Returns --
+            data: The list containing the training examples
+            labels: The list containing the training labels
+            max_length: The max length for "graph_before", "graph_after", "graph_final" representations
+        """
+        pass
