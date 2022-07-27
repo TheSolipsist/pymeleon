@@ -33,12 +33,18 @@ class PymLiz:
         self._find_satisfied_constraint_types(constraint_types, parser_obj.graph)
 
     def copy(self):
+        """
+        Returns a deep copy of the PymLiz object
+        """
         return PymLiz(viewer=self._viewer,
                       parser_obj=self._parser_obj.copy(),
                       constraint_types=self._constraint_types.copy(),
                       modules=self._modules.copy())
 
     def get_graph(self):
+        """
+        Returns the object's graph
+        """
         return self._graph
 
     def _find_satisfied_constraint_types(self, constraint_types, graph):
