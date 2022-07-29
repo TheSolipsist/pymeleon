@@ -41,6 +41,9 @@ class Rule:
         self._funcs_out = parser_obj_out.functions
 
         self._create_node_dict(other_node_dict, operator_dict)
+    
+    def __str__(self):
+        return f"{str(self._parser_obj_in)}\nTRANSFORMS TO\n{str(self._parser_obj_out)}"
 
     # ------- PRIVATE METHODS START ------- #
 
@@ -70,40 +73,21 @@ class Rule:
         self.node_dict = node_dict
         self.reverse_node_dict = reverse_node_dict
 
-    def _copy_apply_graph_rec(self, root_node, root_node_copy):
-        for node in self._cur_graph.successors(root_node):
-            node_copy = node.copy()
-            if node in self._cur_reverse_transform_dict:
-                input_node = self._cur_reverse_transform_dict[node]
-                self._cur_reverse_transform_dict_copy[node_copy] = input_node
-                self._cur_transform_dict_copy[input_node] = node_copy
-            self._cur_graph_copy.add_edge(root_node_copy, node_copy,
-                                          order=self._cur_graph.get_edge_data(root_node, node)["order"])
-            self._copy_apply_graph_rec(node, node_copy)
-
-    def _copy_apply_graph(self, graph, reverse_transform_dict):
+    def _copy_apply_graph(self, graph: DiGraph, transform_dict: dict):
         """
         Returns a deepcopy of the graph and the new transform_dict
         """
+        nodes_copy_dict = {node: node.copy() for node in tuple(graph.nodes)[1:]} # Skipping "root_node"
+        nodes_copy_dict["root_node"] = "root_node"
         graph_copy = DiGraph()
-        transform_dict_copy = dict()
-        reverse_transform_dict_copy = dict()
-        # The following variables are used to reduce recursion overhead (they would have to be used as arguments)
-        self._cur_graph = graph
-        self._cur_reverse_transform_dict = reverse_transform_dict
-        self._cur_graph_copy = graph_copy
-        self._cur_transform_dict_copy = transform_dict_copy
-        self._cur_reverse_transform_dict_copy = reverse_transform_dict_copy
-
         graph_copy.add_node("root_node")
-        self._copy_apply_graph_rec("root_node", "root_node")
-
-        # Not deleting _cur_graph and _cur_reverse_transform_dict because they will be overwritten in apply()
-        del self._cur_graph_copy
-        del self._cur_transform_dict_copy
-        del self._cur_reverse_transform_dict_copy
-
-        return graph_copy, transform_dict_copy, reverse_transform_dict_copy
+        for node, node_copy in nodes_copy_dict.items():
+            graph_copy.add_node(node_copy)
+            for suc_node in graph.successors(node):
+                suc_node_copy = nodes_copy_dict[suc_node]
+                graph_copy.add_edge(node_copy, suc_node_copy, order=graph[node][suc_node]["order"])
+        transform_dict_copy = {node_in: nodes_copy_dict[node_graph] for node_in, node_graph in transform_dict.items()}
+        return graph_copy, transform_dict_copy
 
     def _remove_mapped_edges_rec(self, node):
         cur_transform_dict = self._cur_transform_dict
@@ -157,12 +141,10 @@ class Rule:
         -- Returns --
             transformed_graph (networkx DiGraph): The transformed graph
         """
-
-        reverse_transform_dict = {v: k for k, v in transform_dict.items()}
-
         if deepcopy_graph:
-            graph, transform_dict, reverse_transform_dict = self._copy_apply_graph(graph, reverse_transform_dict)
-
+            graph, transform_dict = self._copy_apply_graph(graph, transform_dict)
+        reverse_transform_dict = {v: k for k, v in transform_dict.items()}
+        
         self._cur_graph = graph
         self._cur_transform_dict = transform_dict
         self._cur_reverse_transform_dict = reverse_transform_dict
@@ -172,16 +154,15 @@ class Rule:
             if graph.has_edge("root_node", transform_dict[in_node]):
                 graph.remove_edge("root_node", transform_dict[in_node])
             self._remove_mapped_edges_rec(in_node)
-
         self._add_output_graph()
         # cur_node_dict is the equivalent of node_dict for the specific input and output graphs of the graph to transform
         cur_node_dict = self._cur_node_dict
 
-        # Remove the nodes that were transformed and add between the new output nodes and the rest of the graph any edges that
-        # existed between nodes that were transformed (and mapped to output nodes) and the rest of the graph
+        # Remove the nodes that were transformed and add between the new output nodes and the rest of the graph any 
+        # edges that existed between nodes that were transformed (and mapped to output nodes) and the rest of the graph
         for graph_node in cur_node_dict:
             out_nodes = cur_node_dict[graph_node]
-            num_out_nodes = len(cur_node_dict[graph_node])
+            num_out_nodes = len(out_nodes)
             for pre_node in graph.predecessors(graph_node):
                 if pre_node not in reverse_transform_dict:
                     cur_order = graph.get_edge_data(pre_node, graph_node)["order"]

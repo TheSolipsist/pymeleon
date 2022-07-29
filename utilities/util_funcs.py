@@ -1,9 +1,13 @@
+import random
 from time import perf_counter
 import functools
 import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
 from language.language import Language
+from language.parser import Node
+from language.rule import Rule
+from language.rule_search import RuleSearch
 from neural_net.neural_net import NeuralNet, NeuralNetError
 from neural_net.metrics import Metrics
 import torch
@@ -105,3 +109,30 @@ def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = No
         fig.savefig(f"results/{metric_str}_{i}.png", dpi=150)
         plt.close(fig)
     
+def test_rules(language: Language) -> None:
+    rule_search = RuleSearch()
+    rules = language.rules
+    graph = DiGraph()
+    for type in language.types:
+        graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
+    num_originals = len(language.types)
+    while True:
+        # save_graph(graph, print=True, show_constraints=True)
+        while True:
+            rule: Rule = random.choice(rules)
+            transform_dicts = tuple(rule_search(rule, graph))
+            if transform_dicts:
+                transform_dict = random.choice(transform_dicts)
+                break
+        # print(rule)
+        num_originals_curr = 0
+        graph = rule.apply(graph, transform_dict)
+        for node in graph.nodes:
+            if graph.out_degree(node) == 0 and node.value != "ORIGINAL":
+                raise RuntimeError("A leaf was generated")
+            if node != "root_node" and node.value == "ORIGINAL":
+                num_originals_curr += 1
+        if num_originals != num_originals_curr:
+            num_originals = num_originals_curr
+            raise RuntimeError("ORIGINAL node created")
+                

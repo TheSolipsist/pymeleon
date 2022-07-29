@@ -269,6 +269,9 @@ class RuleParser(Parser):
             self.constraints = fix_constraints(constraints)
             add_constraints_to_nodes(self.graph, self.constraints)
 
+    def __str__(self):
+        return f"{', '.join(self._args)} with constraints {self.constraints}"
+
 
 class PymLizParser(Parser):
     """

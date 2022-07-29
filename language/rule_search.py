@@ -10,7 +10,8 @@ class RuleSearch:
     """
     Rule search class for graph transformation
     
-    RuleSearch objects are callable and return a generator, yielding subgraphs that match a rule's input graph
+    RuleSearch objects are callable and return a generator, yielding transform_dicts {in_node: graph_node} for
+    subgraphs that match a rule's input graph
     """
 
     def __init__(self) -> None:
