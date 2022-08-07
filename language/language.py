@@ -22,7 +22,7 @@ class Language:
     """
 
     def __init__(self, rules=None, types=None):
-        self.rules = list()
+        self.rules: list[Rule] = list()
         self.types = dict()
         if rules is not None:
             self.add_rules(rules)
@@ -44,5 +44,5 @@ class Language:
     def add_types(self, types: dict):
         for type_name, func in types.items():
             if not isinstance(type_name, str) or not hasattr(func, "__call__"):
-                raise TypeError("add_types dict must be a type_name to type_function dict")
+                raise TypeError("add_types dict must be a str to function dict")
         self._add_types(types)
