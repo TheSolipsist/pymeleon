@@ -124,14 +124,14 @@ class FitnessNeuralNet(Fitness):
     """
     def __init__(self,
                  language: Language,
-                 n_gen: int = 5,
+                 n_gen: int = 30,
                  n_items: int = None,
                  lr: float = 0.0001, 
-                 num_epochs: int = 400,
+                 num_epochs: int = 1000,
                  batch_size: int = 2**16,
                  num_classes: int = 1,
                  device_str: str = "cpu",
-                 training_generation_class: TrainingGeneration = TrainingGenerationRandom
+                 training_generation: str = "random"
                  ) -> None:
         self.initial_graph = None
         self.model = NeuralNet(language=language,
@@ -142,15 +142,9 @@ class FitnessNeuralNet(Fitness):
                                batch_size=batch_size,
                                num_classes=num_classes,
                                device_str=device_str,
-                               training_generation_class=training_generation_class)
+                               training_generation=training_generation)
     
-    def set_initial_graph(self, initial_graph: DiGraph) -> None:
-        """
-        Sets the ``initial_graph`` that will be used as ``graph_before`` in ``fitness_score``
-        """
-        self.initial_graph = initial_graph
-    
-    def fitness_score(self, graph: DiGraph, target_graph: DiGraph) -> float:
+    def fitness_score(self, prev_graph: DiGraph, graph: DiGraph, target_graph: DiGraph) -> float:
         """
         ### Returns the fitness score of the current graph
 
@@ -162,6 +156,4 @@ class FitnessNeuralNet(Fitness):
             ``float``: Prediction (0-1) assessing if ``graph`` is closer to ``target_graph`` than the initial graph \
                     from which the genetic algorithm started
         """
-        if self.initial_graph is None:
-            raise FitnessError("Initial graph needs to be set before fitness_score can be called")
-        return self.model.predict(self.initial_graph, graph, target_graph)
+        return self.model.predict(prev_graph, graph, target_graph)

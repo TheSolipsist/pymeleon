@@ -42,7 +42,7 @@ class GeneticViewer(Viewer):
         self.n_generations = n_generations
         self.n_fittest = n_fittest
         if fitness_class is FitnessNeuralNet:
-            self.fitness_obj = fitness_class(language)
+            self.fitness_obj = fitness_class(language, **kwargs)
         else:
             self.fitness_obj = fitness_class()
         self.fitness = self.fitness_obj.fitness_score
@@ -58,8 +58,6 @@ class GeneticViewer(Viewer):
         """
         Returns the object's output after having changed it according to the viewer's function
         """
-        if isinstance(self.fitness_obj, FitnessNeuralNet):
-            self.fitness_obj.set_initial_graph(obj.get_graph())
         target_graph = parser_obj.get_graph()
         rules = self.language.rules
         max_score = float("-inf")
@@ -67,27 +65,33 @@ class GeneticViewer(Viewer):
         n_fittest = self.n_fittest
         n_generations = self.n_generations
         for i_iter in range(n_iter):
-            obj_list = [obj.copy() for __ in range(n_fittest)]
+            obj_list = [(obj.copy(), obj.copy()) for __ in range(n_fittest)]
             for i_gen in range(n_generations):
                 print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end='')
                 for i in range(n_fittest):
-                    current_obj = obj_list[i]
+                    current_obj = obj_list[i][0]
                     chosen_rule = choice(rules)
                     transform_dicts = tuple(self.search(chosen_rule, current_obj))
                     if not transform_dicts:
-                        obj_list.append(current_obj.copy())
+                        obj_list.append((current_obj.copy(), obj_list[i][1]))
                         continue
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
-                    obj_list.append(new_obj)
-                obj_list.sort(key=lambda obj: self.fitness(obj.get_graph(), target_graph), reverse=True)
+                    obj_list.append((new_obj, current_obj))
+                obj_list.sort(key=lambda _tupobj: self.fitness(_tupobj[1].get_graph(), 
+                                                               _tupobj[0].get_graph(), 
+                                                               target_graph), 
+                              reverse=True)
                 del obj_list[n_fittest:]
             current_best_obj = obj_list[0]
-            current_best_score = self.fitness(current_best_obj.get_graph(), target_graph)
+            current_best_score = self.fitness(current_best_obj[1].get_graph(),
+                                              current_best_obj[0].get_graph(), 
+                                              target_graph)
             if current_best_score > max_score:
                 max_score = current_best_score
-                best_obj = current_best_obj
+                best_obj = current_best_obj[0]
         print()
+        save_graph(best_obj.get_graph(), print=True, show_constraints=True)
         return best_obj.run()
 
     def search(self, rule: Rule, obj: PymLiz):

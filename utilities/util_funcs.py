@@ -60,7 +60,7 @@ def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_te
                      "test": {metric_str: 0 for metric_str in general_metrics}}
     bad_tests = 0
     for i in range(num_tests):
-        print(f"\rCurrently running test {i + 1}", end="")
+        print(f"Currently running test {i + 1}")
         try:
             neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str,
                                        lr=lr, num_epochs=num_epochs, batch_size=batch_size, **kwargs)
@@ -117,14 +117,14 @@ def test_rules(language: Language) -> None:
         graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
     num_originals = len(language.types)
     while True:
-        # save_graph(graph, print=True, show_constraints=True)
+        save_graph(graph, print=True, show_constraints=True)
         while True:
             rule: Rule = random.choice(rules)
             transform_dicts = tuple(rule_search(rule, graph))
             if transform_dicts:
                 transform_dict = random.choice(transform_dicts)
                 break
-        # print(rule)
+        print(rule)
         num_originals_curr = 0
         graph = rule.apply(graph, transform_dict)
         for node in graph.nodes:
