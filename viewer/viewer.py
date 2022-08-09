@@ -1,5 +1,6 @@
 from language.rule import Rule
 from object.object import PymLiz
+from language.language import Language
 
 
 class Viewer:
@@ -19,7 +20,7 @@ class Viewer:
             a rule's input graph
     """
 
-    def __init__(self, language):
+    def __init__(self, language: Language):
         self.language = language
 
     def blob(self, *args):

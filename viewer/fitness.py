@@ -3,7 +3,7 @@ Fitness module for the genetic viewer
 """
 # pymeleon modules
 from language.language import Language
-from neural_net.neural_net import NeuralNet
+from neural_net.neural_net import NeuralNet, NeuralNetError
 from neural_net.training_generation import TrainingGeneration, TrainingGenerationRandom
 # networkx modules
 from networkx import DiGraph
@@ -156,4 +156,7 @@ class FitnessNeuralNet(Fitness):
             ``float``: Prediction (0-1) assessing if ``graph`` is closer to ``target_graph`` than the initial graph \
                     from which the genetic algorithm started
         """
-        return self.model.predict(prev_graph, graph, target_graph)
+        try:
+            return self.model.predict(prev_graph, graph, target_graph)
+        except NeuralNetError:
+            return -1

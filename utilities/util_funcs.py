@@ -35,7 +35,7 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
     """
     Saves the given graph in a png file, or prints it if print==True
     """
-    pos = nx.planar_layout(graph)
+    pos = nx.spring_layout(graph)
     nx.draw(graph, pos, node_size=400)
     for node in graph.nodes:
         if node == "root_node":

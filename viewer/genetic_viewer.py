@@ -6,7 +6,7 @@ from language.language import Language
 from random import choice
 from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
-from viewer.fitness import Fitness, FitnessHeuristic, FitnessNeuralNet
+from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 
 
 class GeneticViewer(Viewer):
@@ -31,7 +31,7 @@ class GeneticViewer(Viewer):
                  n_iter=10,
                  n_generations=20,
                  n_fittest=10,
-                 fitness_class: Fitness = FitnessNeuralNet,
+                 fitness: str = "neural_random",
                  **kwargs):
         super().__init__(language)
         self._RuleSearch = RuleSearch()
@@ -41,10 +41,12 @@ class GeneticViewer(Viewer):
         self.n_iter = n_iter
         self.n_generations = n_generations
         self.n_fittest = n_fittest
-        if fitness_class is FitnessNeuralNet:
-            self.fitness_obj = fitness_class(language, **kwargs)
-        else:
-            self.fitness_obj = fitness_class()
+        if fitness == "neural_random":
+            self.fitness_obj = FitnessNeuralNet(language, training_generation="random", **kwargs)
+        elif fitness == "neural_exhaustive":
+            self.fitness_obj = FitnessNeuralNet(language, training_generation="exhaustive", **kwargs)
+        elif fitness == "heuristic":
+            self.fitness_obj = FitnessHeuristic()
         self.fitness = self.fitness_obj.fitness_score
 
     def blob(self, *args):
@@ -67,7 +69,7 @@ class GeneticViewer(Viewer):
         for i_iter in range(n_iter):
             obj_list = [(obj.copy(), obj.copy()) for __ in range(n_fittest)]
             for i_gen in range(n_generations):
-                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end='')
+                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
                     current_obj = obj_list[i][0]
                     chosen_rule = choice(rules)
@@ -82,6 +84,10 @@ class GeneticViewer(Viewer):
                                                                _tupobj[0].get_graph(), 
                                                                target_graph), 
                               reverse=True)
+                for _tupobj in obj_list:
+                    print(f"{self.fitness(_tupobj[1].get_graph(), _tupobj[0].get_graph(), target_graph):.3f}", end=" ")
+                    save_graph(_tupobj[0].get_graph(), print=True, show_constraints=True)
+                print()
                 del obj_list[n_fittest:]
             current_best_obj = obj_list[0]
             current_best_score = self.fitness(current_best_obj[1].get_graph(),
@@ -91,7 +97,6 @@ class GeneticViewer(Viewer):
                 max_score = current_best_score
                 best_obj = current_best_obj[0]
         print()
-        save_graph(best_obj.get_graph(), print=True, show_constraints=True)
         return best_obj.run()
 
     def search(self, rule: Rule, obj: PymLiz):
