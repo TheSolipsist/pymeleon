@@ -79,8 +79,9 @@ class PymLiz:
         the rule is not to be applied to the graph inplace, return the transformed graph
         """
         if not inplace:
-            self._graph = rule.apply(self._graph, transform_dict, deepcopy_graph=True)
-            return self
+            new_obj = self.copy()
+            new_obj._graph = rule.apply(self._graph, transform_dict, deepcopy_graph=True)
+            return new_obj
         else:
             rule.apply(self._graph, transform_dict, deepcopy_graph=False)
 
