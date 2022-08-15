@@ -10,7 +10,7 @@ class SequenceDataset(Dataset):
         if device is None:
             device = torch.device("cpu")
         self.data = torch.tensor(data, dtype=torch.float32, device=device).reshape(len(data), len(data[0]), len(data[0][0]))
-
+        
     def __len__(self):
         return len(self.data)
 

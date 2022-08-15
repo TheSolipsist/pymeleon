@@ -12,7 +12,7 @@ class Metrics:
     def __init__(self, loss_func=torch.nn.BCELoss(), auc_class=AUROC, num_classes: int = 1) -> None:
         # AUROC initialization throws a warning that is irrelevant to the user, so it is suppressed
         warnings.filterwarnings("ignore", category=UserWarning, message="Metric `AUROC` will save all targets and predictions in buffer. For large datasets this may lead to large memory footprint.")
-        _auc_func = auc_class(num_classes=num_classes)
+        # _auc_func = auc_class(num_classes=num_classes)
         self.metric_funcs = {
             "loss": loss_func,
             # "AUC": lambda y_hat, y: _auc_func(y_hat, y.to(torch.uint8)),

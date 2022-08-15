@@ -2,8 +2,8 @@
 Neural network implementation module
 """
 
-from time import perf_counter
 import itertools
+from time import perf_counter
 # pymeleon modules
 from language.language import Language
 from language.parser import Node
@@ -13,8 +13,7 @@ from neural_net.dataset import SequenceDataset
 from neural_net.metrics import Metrics
 # torch modules
 import torch
-from torch.utils.data import DataLoader
-from torch.utils.data import random_split
+from torch.utils.data import DataLoader, random_split
 # networkx modules
 from networkx import DiGraph
 
@@ -169,7 +168,8 @@ class NeuralNet:
                  language: Language,
                  n_gen: int = None,
                  n_items: int = None,
-                 lr: float = 0.0001, 
+                 lr: float = 0.0001,
+                 prev_reg_const = 0.1,
                  num_epochs: int = 400,
                  batch_size: int = 2**16,
                  num_classes: int = 1,
@@ -178,38 +178,51 @@ class NeuralNet:
                  ) -> None:
         self.language = language
         self.device = torch.device(device_str)
+        self.prev_reg_const = prev_reg_const
         self.batch_size = batch_size
-        self.metric_funcs = Metrics(num_classes=num_classes).metric_funcs
+        self.metric_funcs = Metrics(loss_func=self.loss_function).metric_funcs
         if training_generation == "random":
             train_gen_obj = TrainingGenerationRandom(n_gen, n_items)
         elif training_generation == "exhaustive":
             train_gen_obj = TrainingGenerationExhaustive(n_gen, n_items)
         else:
             raise NeuralNetError("Training generation argument must be 'random' or 'exhaustive'")
-        self._data = train_gen_obj.generate_training_data(language)
-        self._prepare_data()
-        print("Training data ready, initializing network")
-        datasets = self._init_net(lr)
-        # self._train(datasets, num_epochs)
+        data = self._prepare_data(train_gen_obj.generate_training_data(language))
+        dataloaders = self._init_net(lr, data)
+        self._train(dataloaders, num_epochs)
 
+    def loss_function(self, 
+                      data_tensors: torch.Tensor
+                      ):
+        """
+        Loss function for the neural network, discriminator
+        """
+        before_tensor = data_tensors[:, 0]
+        after_tensor = data_tensors[:, 1]
+        neg_tensor = data_tensors[:, 2]
+        loss = (torch.sigmoid(self.model(after_tensor) - self.model(neg_tensor)) + 
+                self.prev_reg_const * torch.sigmoid((self.model(after_tensor) - self.model(before_tensor))))
+        return loss.mean()
+        
     def _init_weights(m):
         if isinstance(m, torch.nn.Linear):
             torch.nn.init.xavier_normal_(m.weight)
             torch.nn.init.constant_(m.bias, 0)
 
-    def _prepare_data(self) -> None:
+    def _prepare_data(self, data: list) -> list:
         """
         Transforms the training graphs to their DFS representations and removes duplicates
         """
         dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.language) for graph in graph_tuple)
                                           for graph_tuple in sample)
-        self._data = list(map(dfs_sample, self._data))
-        self._graph_len = max_len_training_data(self._data)
-        fix_len_training_data(self._data, self._graph_len)
-        self._data = [tuple(g_target + g_final for g_target, g_final in sample) for sample in self._data]
-        remove_duplicates(self._data)
+        data = list(map(dfs_sample, data))
+        self._graph_len = max_len_training_data(data)
+        fix_len_training_data(data, self._graph_len)
+        data = [tuple(g_target + g_final for g_target, g_final in sample) for sample in data]
+        remove_duplicates(data)
+        return data
         
-    def _init_net(self, lr: float) -> None:
+    def _init_net(self, lr: float, data: list) -> dict[str, SequenceDataset]:
         """
         Initializes the network for training
         """
@@ -220,66 +233,69 @@ class NeuralNet:
         ).to(self.device)
         self.model.apply(NeuralNet._init_weights)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=lr)
-        train_size = int(0.99 * len(self._data))
-        test_size = len(self._data) - train_size
-        self._data = SequenceDataset(self._data)
-        train_set, test_set = random_split(self._data, [train_size, test_size])
+        train_size = int(0.8 * len(data))
+        test_size = len(data) - train_size
+        data = SequenceDataset(data)
+        train_set, test_set = random_split(data, [train_size, test_size])
         # x_val, x_test = train_test_split(x_test, train_size=0.5)
         # validation_set = SequenceDataset(x_val, y_val, device=self.device)
-        return {"train": train_set, 
-                "test": test_set}
+        return {"train": DataLoader(train_set, batch_size=min(train_size, self.batch_size), shuffle=True), 
+                "test": DataLoader(test_set, batch_size=min(test_size, self.batch_size), shuffle=False)}
     
-    def _calculate_metrics(self, datasets: dict[str, SequenceDataset]):
+    def _calculate_metrics(self, dataloaders: dict[str, SequenceDataset]):
         """
-        Returns the metrics of the model for the given datasets
+        Returns the metrics of the model for the given dataloaders
         """
-        metrics = {dataset_str: dict() for dataset_str in datasets}
-        for dataset_str, dataset in datasets.items():
-            y_hat = self.model(dataset.x)
+        metrics = {dataset_str: {metric_str: 0 for metric_str in self.metric_funcs}
+                   for dataset_str in dataloaders}
+        for dataset_str, dataloader in dataloaders.items():
             for metric_str, metric in self.metric_funcs.items():
-                metrics[dataset_str][metric_str] = metric(y_hat, dataset.y)
+                for data in dataloader:
+                    metrics[dataset_str][metric_str] += metric(data)
+                metrics[dataset_str][metric_str] /= len(dataloader)
         return metrics
     
-    def _train(self, datasets: dict[str, SequenceDataset], num_epochs: int) -> None:
+    def _train(self, dataloaders: dict[str, SequenceDataset], num_epochs: int) -> None:
         """
         Starts training the neural network
 
         Args:
-            ``datasets`` (dict[str, SequenceDataset]): Dictionary mapping the name of the split dataset to the dataset
-                    Example: datasets = {"train": train_set,
-                                         "validation": validation_set,
-                                         "test": test_set}
+            ``dataloaders`` (dict[str, SequenceDataset]): Dictionary mapping the name of the split dataset to the dataset
+                    Example: dataloaders = {"train": train_loader,
+                                            "validation": validation_loader,
+                                            "test": test_loader}
         """
-        train_loader = DataLoader(datasets["train"], batch_size=min(len(datasets["train"]), self.batch_size), shuffle=True)
-        # validation_loader = DataLoader(datasets["validation"], batch_size=min(len(datasets["validation"]), self.batch_size), shuffle=False)
         model = self.model
         optimizer = self.optimizer
-        metrics_epoch = {dataset_str: {metric : torch.empty(num_epochs, dtype=torch.float32, requires_grad=False)
+        metrics_epoch = {dataset_str: {metric : torch.zeros(num_epochs, dtype=torch.float32, requires_grad=False)
                                        for metric in self.metric_funcs}
-                         for dataset_str in datasets}
+                         for dataset_str in dataloaders}
         for epoch in range(num_epochs):
             model.train()
-            print(f"\rEpoch: {epoch + 1}/{num_epochs}", end='')
-            for x, y in train_loader:
+            print(f"\rEpoch: {epoch + 1}/{num_epochs}", end="")
+            for data_tensors in dataloaders["train"]:
                 optimizer.zero_grad()
-                y_hat = model(x)
-                loss = self.metric_funcs["loss"](y_hat, y)
+                loss = self.metric_funcs["loss"](data_tensors)
                 loss.backward()
                 optimizer.step()
             model.eval()
             with torch.no_grad():
-                for dataset_str, metrics in self._calculate_metrics(datasets).items():
-                    for metric_str, metric in metrics.items():
-                        metrics_epoch[dataset_str][metric_str][epoch] = metric
+                metrics_epoch["train"]["loss"][epoch] = loss
+                for test_data in dataloaders["test"]:
+                    metrics_epoch["test"]["loss"][epoch] += self.metric_funcs["loss"](test_data)
+                metrics_epoch["test"]["loss"][epoch] /= len(dataloaders["test"])
+            # with torch.no_grad():
+            #     for dataset_str, metrics in self._calculate_metrics(dataloaders).items():
+            #         for metric_str, metric in metrics.items():
+            #             metrics_epoch[dataset_str][metric_str][epoch] = metric
         print()
         if self.device.type == "cuda":
             torch.cuda.synchronize(self.device)
         self.metrics_epoch = metrics_epoch 
-        
     
-    def predict(self, graph_before: DiGraph, graph_after: DiGraph, graph_final: DiGraph) -> float:
+    def predict(self, graph_after: DiGraph, graph_final: DiGraph) -> float:
         representation = []
-        graphs = [graph_before, graph_after, graph_final]
+        graphs = [graph_after, graph_final]
         for graph in graphs:
             graph_repr = dfs_representation(graph, self.language)
             if len(graph_repr) > self._graph_len:
@@ -288,4 +304,4 @@ class NeuralNet:
             representation.extend(graph_repr + (self._graph_len - len(graph_repr)) * (0,))
         self.model.eval()
         with torch.no_grad():
-            return self.model(torch.tensor(representation, dtype=torch.float32, device=self.device)).item()
+            return torch.sigmoid(self.model(torch.tensor(representation, dtype=torch.float32, device=self.device))).item()
