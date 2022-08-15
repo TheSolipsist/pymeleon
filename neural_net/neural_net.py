@@ -2,8 +2,9 @@
 Neural network implementation module
 """
 
-# pymeleon modules
 from time import perf_counter
+import itertools
+# pymeleon modules
 from language.language import Language
 from language.parser import Node
 from language.rule import Rule
@@ -13,12 +14,9 @@ from neural_net.metrics import Metrics
 # torch modules
 import torch
 from torch.utils.data import DataLoader
-# scikit-learn modules
-from sklearn.model_selection import train_test_split
+from torch.utils.data import random_split
 # networkx modules
 from networkx import DiGraph
-# Python modules
-import itertools
 
 
 class NeuralNetError(Exception):
@@ -64,6 +62,9 @@ def dfs_representation(graph: DiGraph, language: Language) -> tuple:
     and the order in which the representation of each component is added to the final representation is dictated by the
     order of the hashes
     """
+    
+    if graph is None:
+        return tuple()
     constraint_types = language.types
     components = []
     max_num = float("-inf")
@@ -108,7 +109,13 @@ def max_len_training_data(data: list[tuple[list[int]]]) -> int:
     """
     Finds the max length of the graph representations in the training data
     """
-    return max(len(max(reprs, key=len)) for reprs in data)
+    max_len = float("-inf")
+    for sample in data:
+        for repr_tuple in sample:
+            curr_max_len = len(max(repr_tuple, key=len))
+            max_len = max(curr_max_len, max_len)
+    # return max(len(max(repr_tuple, key=len) for repr_tuple in sample) for sample in data)
+    return max_len
     
     
 def fix_len_training_data(data: list[tuple[tuple[int]]], repr_len: int) -> None:
@@ -117,31 +124,24 @@ def fix_len_training_data(data: list[tuple[tuple[int]]], repr_len: int) -> None:
     each graph representation.
     """
     for i in range(len(data)):
-        data[i] = tuple(representation + (0,) * (repr_len - len(representation)) for representation in data[i])
+        data[i] = tuple(tuple(dfs_repr + (0,) * (repr_len - len(dfs_repr)) for dfs_repr in graph_tuple) 
+                        for graph_tuple in data[i])
 
 
-def remove_duplicates(data: list[tuple[list[int]]], labels: list[int]):
+def remove_duplicates(data: list[tuple[list[int]]]):
     """
     Removes duplicates from training data
-
-    If labels are conflicted, keeps the training sample as positive
     """
     indices_to_delete = []
     found_samples = dict()
     for i, training_sample in enumerate(data):
-        label = labels[i]
         if training_sample in found_samples:
-            if label != found_samples[training_sample]["label"]:
-                # If both 1 and 0 have been found, keep the sample as positive (1)
-                first_occurrence_index = found_samples[training_sample]["index"]
-                labels[first_occurrence_index] = 1
             indices_to_delete.append(i)
         else:
-            found_samples[training_sample] = {"label": label, "index": i}
+            found_samples[training_sample] = {"index": i}
     for index in indices_to_delete[::-1]:
         # Deleting in reverse order to not shift the position of the actual elements of the rest of the indices
         del data[index]
-        del labels[index]
         
         
 class NeuralNet:
@@ -158,7 +158,7 @@ class NeuralNet:
         ``batch_size``: The batch size to use while iterating through the training and testing data
         ``num_classes``: The number of labels for each data instance
         ``device_str``: The name of the device on which to keep the model and do the training
-        ``training_generation_class``: The class to use for training example generation
+        ``training_generation``: The method to use for training example generation ("random", "exhaustive")
         
     #### Methods
         ``predict``(graph_before, graph_after, graph_final): Returns a prediction on the fitness of the
@@ -186,10 +186,11 @@ class NeuralNet:
             train_gen_obj = TrainingGenerationExhaustive(n_gen, n_items)
         else:
             raise NeuralNetError("Training generation argument must be 'random' or 'exhaustive'")
-        self._data, self._labels = train_gen_obj.generate_training_data(language)
+        self._data = train_gen_obj.generate_training_data(language)
         self._prepare_data()
+        print("Training data ready, initializing network")
         datasets = self._init_net(lr)
-        self._train(datasets, num_epochs)
+        # self._train(datasets, num_epochs)
 
     def _init_weights(m):
         if isinstance(m, torch.nn.Linear):
@@ -200,32 +201,30 @@ class NeuralNet:
         """
         Transforms the training graphs to their DFS representations and removes duplicates
         """
-        dfs_sample = lambda sample: tuple(dfs_representation(graph, self.language) for graph in sample)
+        dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.language) for graph in graph_tuple)
+                                          for graph_tuple in sample)
         self._data = list(map(dfs_sample, self._data))
-        self._input_len = max_len_training_data(self._data)
-        fix_len_training_data(self._data, self._input_len)
-        self._data = list(g_b + g_af + g_f for g_b, g_af, g_f in self._data)
-        remove_duplicates(self._data, self._labels)
+        self._graph_len = max_len_training_data(self._data)
+        fix_len_training_data(self._data, self._graph_len)
+        self._data = [tuple(g_target + g_final for g_target, g_final in sample) for sample in self._data]
+        remove_duplicates(self._data)
         
     def _init_net(self, lr: float) -> None:
         """
         Initializes the network for training
         """
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(self._input_len * 3, 100),
+            torch.nn.Linear(self._graph_len * 2, 100),
             torch.nn.ReLU(),
             torch.nn.Linear(100, 1),
-            torch.nn.Sigmoid()
         ).to(self.device)
         self.model.apply(NeuralNet._init_weights)
         self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=lr)
-        x_train, x_test, y_train, y_test = train_test_split(self._data, self._labels, train_size=0.8)
-        # x_val, x_test, y_val, y_test = train_test_split(x_test, y_test, train_size=0.5)
-        train_set = SequenceDataset(x_train, y_train, device=self.device)
-        test_set = SequenceDataset(x_test, y_test, device=self.device)
-        if ((train_set.y.all() or not train_set.y.any()) or
-            (test_set.y.all() or not test_set.y.any())):
-            raise NeuralNetError("Only 1 label exists in either the training or the test set")
+        train_size = int(0.99 * len(self._data))
+        test_size = len(self._data) - train_size
+        self._data = SequenceDataset(self._data)
+        train_set, test_set = random_split(self._data, [train_size, test_size])
+        # x_val, x_test = train_test_split(x_test, train_size=0.5)
         # validation_set = SequenceDataset(x_val, y_val, device=self.device)
         return {"train": train_set, 
                 "test": test_set}
@@ -283,10 +282,10 @@ class NeuralNet:
         graphs = [graph_before, graph_after, graph_final]
         for graph in graphs:
             graph_repr = dfs_representation(graph, self.language)
-            if len(graph_repr) > self._input_len:
+            if len(graph_repr) > self._graph_len:
                 raise NeuralNetError(f"Graph {graph} has more than allowed nodes ({len(graph_repr)}"\
-                                     f", maximum allowed are {self._input_len})")
-            representation.extend(graph_repr + (self._input_len - len(graph_repr)) * (0,))
+                                     f", maximum allowed are {self._graph_len})")
+            representation.extend(graph_repr + (self._graph_len - len(graph_repr)) * (0,))
         self.model.eval()
         with torch.no_grad():
             return self.model(torch.tensor(representation, dtype=torch.float32, device=self.device)).item()
