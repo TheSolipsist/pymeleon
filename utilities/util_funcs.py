@@ -103,7 +103,7 @@ def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = No
         ax.set_ylabel(f"{metric_str}")
         ax.set_xlabel(f"Epoch")
         for dataset_str in metrics_epoch:
-            ax.plot(metrics_epoch[dataset_str][metric_str], label=f"{dataset_str} set")
+            ax.plot(metrics_epoch[dataset_str][metric_str].to(torch.device("cpu")), label=f"{dataset_str} set")
         ax.legend()
         # plt.show()
         fig.savefig(f"results/{metric_str}_{i}.png", dpi=150)

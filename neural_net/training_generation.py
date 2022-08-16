@@ -36,7 +36,7 @@ def generate_graph_from_constraint_types(constraint_types: tuple[str]):
     return graph
 
 
-def generate_initial_graph_list(constraint_types: dict, n_items: int = None) -> list[DiGraph]:
+def generate_initial_graph_list(constraint_types: dict, n_items: int) -> list[DiGraph]:
     """
     Generates the initial graph list
 
@@ -44,8 +44,6 @@ def generate_initial_graph_list(constraint_types: dict, n_items: int = None) -> 
     of length 1, 2, ..., n_items.
     """
     initial_graph_list = []
-    if n_items is None:
-        n_items = len(constraint_types)
     for r in range(1, n_items + 1):
         initial_graph_list.extend(map(generate_graph_from_constraint_types,
                                       combinations_with_replacement(constraint_types, r)))
@@ -147,16 +145,15 @@ class TrainingGenerationRandom(TrainingGeneration):
         n_gen: The number of rules to apply to each initial graph of constraint types while generating training \
             sequences
         n_items: The range of items to use when generating the initial graphs of constraint types (graphs of \
-            range(n_items) nodes will be generated). If not given, defaults to len(language.constraint_types)
+            range(n_items) nodes will be generated).
             
     Methods:
         ``generate_training_data(language, n_gen, items)``: Returns the training data 
     """
     def __init__(self, 
-                 n_gen: int = None, 
-                 n_items: int = None) -> None:
-        if n_gen is None:
-            n_gen = 20
+                 n_gen: int,
+                 n_items: int
+                 ) -> None:
         self.n_gen = n_gen
         self.n_items = n_items
     
@@ -227,10 +224,8 @@ class TrainingGenerationExhaustive(TrainingGeneration):
         ``generate_training_data(language, n_gen, items)``: Returns the training data 
     """
     def __init__(self, 
-                 n_gen: int = None, 
-                 n_items: int = None) -> None:
-        if n_gen is None:
-            n_gen = 20
+                 n_gen: int, 
+                 n_items: int) -> None:
         self.n_gen = n_gen
         self.n_items = n_items
     

@@ -124,27 +124,17 @@ class FitnessNeuralNet(Fitness):
     """
     def __init__(self,
                  language: Language,
-                 n_gen: int = 30,
-                 n_items: int = None,
-                 lr: float = 0.0001, 
-                 num_epochs: int = 1000,
-                 batch_size: int = 2**16,
-                 num_classes: int = 1,
+                 hyperparams: dict = None,
                  device_str: str = "cpu",
                  training_generation: str = "random"
                  ) -> None:
         self.initial_graph = None
         self.model = NeuralNet(language=language,
-                               n_gen=n_gen,
-                               n_items=n_items,
-                               lr=lr,
-                               num_epochs=num_epochs,
-                               batch_size=batch_size,
-                               num_classes=num_classes,
+                               hyperparams=hyperparams,
                                device_str=device_str,
                                training_generation=training_generation)
     
-    def fitness_score(self, prev_graph: DiGraph, graph: DiGraph, target_graph: DiGraph) -> float:
+    def fitness_score(self, graph: DiGraph, target_graph: DiGraph) -> float:
         """
         ### Returns the fitness score of the current graph
 
@@ -153,10 +143,9 @@ class FitnessNeuralNet(Fitness):
             ``target_graph`` (DiGraph): The final graph which we are trying to reach
 
         #### Returns:
-            ``float``: Prediction (0-1) assessing if ``graph`` is closer to ``target_graph`` than the initial graph \
-                    from which the genetic algorithm started
+            ``float``: Prediction (0-1) assessing how close ``graph`` is to ``target_graph``
         """
         try:
-            return self.model.predict(prev_graph, graph, target_graph)
+            return self.model.predict(graph, target_graph)
         except NeuralNetError:
             return -1

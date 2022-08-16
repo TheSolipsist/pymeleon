@@ -28,23 +28,25 @@ class GeneticViewer(Viewer):
     def __init__(self,
                  language: Language,
                  modules: dict = None,
-                 n_iter=10,
-                 n_generations=20,
-                 n_fittest=10,
+                 n_iter: int = 10,
+                 n_gen: int = 20,
+                 n_fittest: int = 10,
                  fitness: str = "neural_random",
-                 **kwargs):
+                 device_str: str = "cpu",
+                 hyperparams: dict = None
+                 ) -> None :
         super().__init__(language)
         self._RuleSearch = RuleSearch()
         if modules is None:
             modules = dict()
         self.modules = modules
         self.n_iter = n_iter
-        self.n_generations = n_generations
+        self.n_gen = n_gen
         self.n_fittest = n_fittest
         if fitness == "neural_random":
-            self.fitness_obj = FitnessNeuralNet(language, training_generation="random", **kwargs)
+            self.fitness_obj = FitnessNeuralNet(language, hyperparams, training_generation="random", device_str=device_str)
         elif fitness == "neural_exhaustive":
-            self.fitness_obj = FitnessNeuralNet(language, training_generation="exhaustive", **kwargs)
+            self.fitness_obj = FitnessNeuralNet(language, hyperparams, training_generation="exhaustive", device_str=device_str)
         elif fitness == "heuristic":
             self.fitness_obj = FitnessHeuristic()
         self.fitness = self.fitness_obj.fitness_score
@@ -65,37 +67,30 @@ class GeneticViewer(Viewer):
         max_score = float("-inf")
         n_iter = self.n_iter
         n_fittest = self.n_fittest
-        n_generations = self.n_generations
         for i_iter in range(n_iter):
-            obj_list = [(obj.copy(), obj.copy()) for __ in range(n_fittest)]
-            for i_gen in range(n_generations):
+            obj_list = [obj.copy() for __ in range(n_fittest)]
+            for i_gen in range(self.n_gen):
                 print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
-                    current_obj = obj_list[i][0]
+                    current_obj = obj_list[i]
                     chosen_rule = choice(rules)
                     transform_dicts = tuple(self.search(chosen_rule, current_obj))
                     if not transform_dicts:
-                        obj_list.append((current_obj.copy(), obj_list[i][1]))
+                        obj_list.append(current_obj.copy())
                         continue
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
-                    obj_list.append((new_obj, current_obj))
-                obj_list.sort(key=lambda _tupobj: self.fitness(_tupobj[1].get_graph(), 
-                                                               _tupobj[0].get_graph(), 
-                                                               target_graph), 
+                    obj_list.append(new_obj)
+                obj_list.sort(key=lambda _obj: self.fitness(_obj.get_graph(),
+                                                            target_graph), 
                               reverse=True)
-                for _tupobj in obj_list:
-                    print(f"{self.fitness(_tupobj[1].get_graph(), _tupobj[0].get_graph(), target_graph):.3f}", end=" ")
-                    save_graph(_tupobj[0].get_graph(), print=True, show_constraints=True)
-                print()
                 del obj_list[n_fittest:]
             current_best_obj = obj_list[0]
-            current_best_score = self.fitness(current_best_obj[1].get_graph(),
-                                              current_best_obj[0].get_graph(), 
+            current_best_score = self.fitness(current_best_obj.get_graph(),
                                               target_graph)
             if current_best_score > max_score:
                 max_score = current_best_score
-                best_obj = current_best_obj[0]
+                best_obj = current_best_obj
         print()
         return best_obj.run()
 

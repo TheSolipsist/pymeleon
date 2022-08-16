@@ -145,66 +145,76 @@ def remove_duplicates(data: list[tuple[list[int]]]):
         
 class NeuralNet:
     """
-    ### Neural network implementation for usage with the Genetic Viewer as its fitness function
+    Neural network implementation for usage with the Genetic Viewer as its fitness function
 
-    #### Parameters
-        ``language``: Language to be used
-        ``n_gen``: Number of consecutive rules to be applied to the initial graphs when generating
-            the training data
-        ``n_items``: Maximum number of items to create initial graphs from when generating the training data
-        ``lr``: Learning rate
-        ``num_epochs``: Number of epochs to iterate through while training the network
-        ``batch_size``: The batch size to use while iterating through the training and testing data
-        ``num_classes``: The number of labels for each data instance
+    Parameters
+        ``language``: Language to be used.
+        ``hyperparams``: Dictionary holding any of the following hyperparameters
+            ``n_gen``: Number of consecutive rules to be applied to the initial graphs when generating \
+                the training data. Defaults to 20.
+            ``n_items``: Maximum number of items to create initial graphs from when generating the training \
+                data. Defaults to len(language.types).
+            ``lr``: Learning rate. Defaults to 0.0001.
+            ``num_epochs``: Number of epochs to iterate through while training the network. Defaults to 1000.
+            ``batch_size``: The batch size to use while iterating through the training and testing data. \
+                Defaults to 2**16.
         ``device_str``: The name of the device on which to keep the model and do the training
         ``training_generation``: The method to use for training example generation ("random", "exhaustive")
         
-    #### Methods
+    Methods
         ``predict``(graph_before, graph_after, graph_final): Returns a prediction on the fitness of the
         (graph_before, graph_after, graph_final) sequence
     """
+    DEFAULT_HYPERPARAMS = {
+        "n_gen": 20,
+        "n_items": None, # Initialized to len(language.types) for each NeuralNet instance
+        "lr": 0.0001,
+        "prev_reg": 0.1,
+        "num_epochs": 1000,
+        "batch_size": 2**16,
+    }
+    
     def __init__(
                  self,
                  language: Language,
-                 n_gen: int = None,
-                 n_items: int = None,
-                 lr: float = 0.0001,
-                 prev_reg_const = 0.1,
-                 num_epochs: int = 400,
-                 batch_size: int = 2**16,
-                 num_classes: int = 1,
+                 hyperparams: dict = None,
                  device_str: str = "cpu",
                  training_generation: str = "random"
                  ) -> None:
         self.language = language
+        if hyperparams is None:
+            hyperparams = dict()
+        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS.copy()
+        self.hyperparams["n_items"] = len(language.types)
+        self.hyperparams.update(hyperparams)
         self.device = torch.device(device_str)
-        self.prev_reg_const = prev_reg_const
-        self.batch_size = batch_size
         self.metric_funcs = Metrics(loss_func=self.loss_function).metric_funcs
         if training_generation == "random":
-            train_gen_obj = TrainingGenerationRandom(n_gen, n_items)
+            train_gen_obj = TrainingGenerationRandom(self.hyperparams["n_gen"], 
+                                                     self.hyperparams["n_items"])
         elif training_generation == "exhaustive":
-            train_gen_obj = TrainingGenerationExhaustive(n_gen, n_items)
+            train_gen_obj = TrainingGenerationExhaustive(self.hyperparams["n_gen"], 
+                                                         self.hyperparams["n_items"])
         else:
             raise NeuralNetError("Training generation argument must be 'random' or 'exhaustive'")
         data = self._prepare_data(train_gen_obj.generate_training_data(language))
-        dataloaders = self._init_net(lr, data)
-        self._train(dataloaders, num_epochs)
+        dataloaders = self._init_net(data)
+        self._train(dataloaders)
 
     def loss_function(self, 
                       data_tensors: torch.Tensor
-                      ):
+                      ) -> torch.Tensor:
         """
         Loss function for the neural network, discriminator
         """
         before_tensor = data_tensors[:, 0]
         after_tensor = data_tensors[:, 1]
         neg_tensor = data_tensors[:, 2]
-        loss = (torch.sigmoid(self.model(after_tensor) - self.model(neg_tensor)) + 
-                self.prev_reg_const * torch.sigmoid((self.model(after_tensor) - self.model(before_tensor))))
+        loss = (torch.sigmoid(self.model(neg_tensor) - self.model(after_tensor)) + 
+                self.hyperparams["prev_reg"] * torch.sigmoid((self.model(before_tensor) - self.model(after_tensor))))
         return loss.mean()
         
-    def _init_weights(m):
+    def _init_weights(m) -> None:
         if isinstance(m, torch.nn.Linear):
             torch.nn.init.xavier_normal_(m.weight)
             torch.nn.init.constant_(m.bias, 0)
@@ -222,7 +232,7 @@ class NeuralNet:
         remove_duplicates(data)
         return data
         
-    def _init_net(self, lr: float, data: list) -> dict[str, SequenceDataset]:
+    def _init_net(self, data: list) -> dict[str, DataLoader]:
         """
         Initializes the network for training
         """
@@ -232,17 +242,18 @@ class NeuralNet:
             torch.nn.Linear(100, 1),
         ).to(self.device)
         self.model.apply(NeuralNet._init_weights)
-        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.hyperparams["lr"])
         train_size = int(0.8 * len(data))
         test_size = len(data) - train_size
-        data = SequenceDataset(data)
+        data = SequenceDataset(data, device=self.device)
         train_set, test_set = random_split(data, [train_size, test_size])
         # x_val, x_test = train_test_split(x_test, train_size=0.5)
         # validation_set = SequenceDataset(x_val, y_val, device=self.device)
-        return {"train": DataLoader(train_set, batch_size=min(train_size, self.batch_size), shuffle=True), 
-                "test": DataLoader(test_set, batch_size=min(test_size, self.batch_size), shuffle=False)}
+        batch_size = self.hyperparams["batch_size"]
+        return {"train": DataLoader(train_set, batch_size=min(train_size, batch_size), shuffle=True), 
+                "test": DataLoader(test_set, batch_size=min(test_size, batch_size), shuffle=False)}
     
-    def _calculate_metrics(self, dataloaders: dict[str, SequenceDataset]):
+    def _calculate_metrics(self, dataloaders: dict[str, DataLoader]):
         """
         Returns the metrics of the model for the given dataloaders
         """
@@ -255,19 +266,20 @@ class NeuralNet:
                 metrics[dataset_str][metric_str] /= len(dataloader)
         return metrics
     
-    def _train(self, dataloaders: dict[str, SequenceDataset], num_epochs: int) -> None:
+    def _train(self, dataloaders: dict[str, DataLoader]) -> None:
         """
-        Starts training the neural network
+        Trains the neural network
 
         Args:
-            ``dataloaders`` (dict[str, SequenceDataset]): Dictionary mapping the name of the split dataset to the dataset
+            ``dataloaders`` (dict[str, DataLoader]): Dictionary mapping the name of the split dataset to the dataloader
                     Example: dataloaders = {"train": train_loader,
                                             "validation": validation_loader,
                                             "test": test_loader}
         """
+        num_epochs = self.hyperparams["num_epochs"]
         model = self.model
         optimizer = self.optimizer
-        metrics_epoch = {dataset_str: {metric : torch.zeros(num_epochs, dtype=torch.float32, requires_grad=False)
+        metrics_epoch = {dataset_str: {metric : torch.zeros(num_epochs, dtype=torch.float32, requires_grad=False, device=self.device)
                                        for metric in self.metric_funcs}
                          for dataset_str in dataloaders}
         for epoch in range(num_epochs):
@@ -291,6 +303,7 @@ class NeuralNet:
         print()
         if self.device.type == "cuda":
             torch.cuda.synchronize(self.device)
+            self.model = self.model.to(device=torch.device("cpu"))
         self.metrics_epoch = metrics_epoch 
     
     def predict(self, graph_after: DiGraph, graph_final: DiGraph) -> float:
@@ -304,4 +317,4 @@ class NeuralNet:
             representation.extend(graph_repr + (self._graph_len - len(graph_repr)) * (0,))
         self.model.eval()
         with torch.no_grad():
-            return torch.sigmoid(self.model(torch.tensor(representation, dtype=torch.float32, device=self.device))).item()
+            return torch.sigmoid(self.model(torch.tensor(representation, dtype=torch.float32))).item()

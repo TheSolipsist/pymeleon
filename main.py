@@ -30,10 +30,10 @@ if __name__ == "__main__":
     lang.add_types(constraint_types)
     # Or we could say Language(rules=[convert_to_nparray, dot_product], types=constraint_types)
 
-    # x = NeuralNet(lang)
-    utilities.util_funcs.test_neural_net(lang, n_gen=25, device_str="cpu", num_tests=10, num_epochs=5000)
+    # utilities.util_funcs.test_neural_net(lang, n_gen=20, device_str="cuda", num_tests=10, num_epochs=10000)
     
-    # viewer = GeneticViewer(lang, modules, n_generations=50, n_gen=8, num_epochs=1000)
-    # obj = viewer.blob(list1, list2)
-    # output = GeneticParser("a", constraints={"a": "float"})
-    # print(obj.view(output))
+    viewer = GeneticViewer(lang, modules, n_iter=10, n_fittest=10, n_gen=200, 
+                           fitness="neural_random", hyperparams={"n_gen": 30, "num_epochs": 1000}, device_str="cuda")
+    obj = viewer.blob(list1, list2)
+    output = GeneticParser("a", constraints={"a": "float"})
+    print(obj.view(output))
