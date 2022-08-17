@@ -172,6 +172,7 @@ class NeuralNet:
         "prev_reg": 0.1,
         "num_epochs": 1000,
         "batch_size": 2**16,
+        "weight_decay": 1.e-4
     }
     
     def __init__(
@@ -210,9 +211,10 @@ class NeuralNet:
         before_tensor = data_tensors[:, 0]
         after_tensor = data_tensors[:, 1]
         neg_tensor = data_tensors[:, 2]
-        loss = (torch.sigmoid(self.model(neg_tensor) - self.model(after_tensor)) + 
-                self.hyperparams["prev_reg"] * torch.sigmoid((self.model(before_tensor) - self.model(after_tensor))))
-        return loss.mean()
+        after_pred = self.model(after_tensor)
+        loss = (torch.sigmoid(self.model(neg_tensor) - after_pred) + 
+                self.hyperparams["prev_reg"] * torch.sigmoid((self.model(before_tensor) - after_pred)))
+        return loss.sum()
         
     def _init_weights(m) -> None:
         if isinstance(m, torch.nn.Linear):
@@ -229,7 +231,7 @@ class NeuralNet:
         self._graph_len = max_len_training_data(data)
         fix_len_training_data(data, self._graph_len)
         data = [tuple(g_target + g_final for g_target, g_final in sample) for sample in data]
-        remove_duplicates(data)
+        # remove_duplicates(data)
         return data
         
     def _init_net(self, data: list) -> dict[str, DataLoader]:
@@ -237,12 +239,16 @@ class NeuralNet:
         Initializes the network for training
         """
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(self._graph_len * 2, 100),
+            torch.nn.Linear(self._graph_len * 2, 64),
             torch.nn.ReLU(),
-            torch.nn.Linear(100, 1),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 1),
         ).to(self.device)
         self.model.apply(NeuralNet._init_weights)
-        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.hyperparams["lr"])
+        self.optimizer = torch.optim.Adam(params=self.model.parameters(), 
+                                          lr=self.hyperparams["lr"], 
+                                          weight_decay=self.hyperparams["weight_decay"])
         train_size = int(0.8 * len(data))
         test_size = len(data) - train_size
         data = SequenceDataset(data, device=self.device)
@@ -317,4 +323,4 @@ class NeuralNet:
             representation.extend(graph_repr + (self._graph_len - len(graph_repr)) * (0,))
         self.model.eval()
         with torch.no_grad():
-            return torch.sigmoid(self.model(torch.tensor(representation, dtype=torch.float32))).item()
+            return self.model(torch.tensor(representation, dtype=torch.float32)).item()

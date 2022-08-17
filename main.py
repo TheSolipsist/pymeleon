@@ -1,12 +1,8 @@
-from language.parser import GeneticParser, RuleParser, Node
+from language.parser import GeneticParser, RuleParser
 from language.rule import Rule
-from language.rule_search import RuleSearch
 from viewer.genetic_viewer import GeneticViewer
-from viewer.random_viewer import RandomViewer
 import numpy as np
 from language.language import Language
-from time import perf_counter
-from neural_net.neural_net import NeuralNet
 import utilities.util_funcs
 
 if __name__ == "__main__":
@@ -23,17 +19,17 @@ if __name__ == "__main__":
     modules = {"numpy": "np"}
 
     list1 = [1, 2, 3]
-    list2 = [2, 2, 2]
+    list2 = [2, 2, 4]
 
     lang = Language()
     lang.add_rules(convert_to_nparray, dot_product)
     lang.add_types(constraint_types)
     # Or we could say Language(rules=[convert_to_nparray, dot_product], types=constraint_types)
 
-    # utilities.util_funcs.test_neural_net(lang, n_gen=20, device_str="cuda", num_tests=10, num_epochs=10000)
+    # utilities.util_funcs.test_neural_net(lang, {"n_gen": 20, "num_epochs": 300, "lr": 0.001}, device_str="cuda", num_tests=2)
     
-    viewer = GeneticViewer(lang, modules, n_iter=10, n_fittest=10, n_gen=200, 
-                           fitness="neural_random", hyperparams={"n_gen": 30, "num_epochs": 1000}, device_str="cuda")
+    viewer = GeneticViewer(lang, modules, n_iter=10, n_fittest=5, n_gen=10, 
+                           fitness="neural_random", hyperparams={"n_gen": 20, "num_epochs": 300, "lr": 0.001}, device_str="cuda")
     obj = viewer.blob(list1, list2)
     output = GeneticParser("a", constraints={"a": "float"})
     print(obj.view(output))

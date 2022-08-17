@@ -8,6 +8,24 @@ from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
 from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 
+#TODO extend check_graph_match_rec for not connected 
+
+def _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
+    # Successor nodes are ordered by their "order" edge attribute in relation to their root node
+    target_suc_nodes = sorted(list(target_graph.successors(target_root_node)),
+                                key=lambda node: target_graph[target_root_node][node]["order"])
+    # If there are no more successor nodes in the target graph, we found everything we needed
+    if not target_suc_nodes:
+        return True
+    suc_nodes = sorted(list(graph.successors(root_node)),
+                        key=lambda node: graph[root_node][node]["order"])
+    if len(suc_nodes) != len(target_suc_nodes):
+        return False
+    for suc_node, target_suc_node in zip(suc_nodes, target_suc_nodes):
+        if (not target_suc_node.constraints.issubset(suc_node.constraints) or
+                not _check_graph_match_rec(graph, target_graph, suc_node, target_suc_node)):
+            return False
+    return True
 
 class GeneticViewer(Viewer):
     """
@@ -69,6 +87,7 @@ class GeneticViewer(Viewer):
         n_fittest = self.n_fittest
         for i_iter in range(n_iter):
             obj_list = [obj.copy() for __ in range(n_fittest)]
+            scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
                 print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
@@ -76,18 +95,26 @@ class GeneticViewer(Viewer):
                     chosen_rule = choice(rules)
                     transform_dicts = tuple(self.search(chosen_rule, current_obj))
                     if not transform_dicts:
-                        obj_list.append(current_obj.copy())
+                        obj_copy = current_obj.copy()
+                        obj_list.append(obj_copy)
+                        scores[obj_copy] = scores[current_obj]
                         continue
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
-                obj_list.sort(key=lambda _obj: self.fitness(_obj.get_graph(),
-                                                            target_graph), 
-                              reverse=True)
+                    from neural_net.training_generation import get_top_nodes_graph
+                    if _check_graph_match_rec(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph), "root_node", "root_node"):
+                        print()
+                        return new_obj.run()
+                    scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
+                obj_list.sort(key=scores.__getitem__, reverse=True)
+                # for _obj in obj_list:
+                #     print(scores[_obj])
+                #     save_graph(_obj.get_graph(), print=True, show_constraints=True)
                 del obj_list[n_fittest:]
+                scores = {_obj: scores[_obj] for _obj in obj_list}
             current_best_obj = obj_list[0]
-            current_best_score = self.fitness(current_best_obj.get_graph(),
-                                              target_graph)
+            current_best_score = scores[current_best_obj]
             if current_best_score > max_score:
                 max_score = current_best_score
                 best_obj = current_best_obj

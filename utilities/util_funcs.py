@@ -52,8 +52,7 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
         plt.savefig(filename, dpi=600)
     plt.close()
 
-def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_tests=40,
-                    lr=0.0001, num_epochs=100, batch_size=2**16, **kwargs):
+def test_neural_net(lang: Language, hyperparams: dict, device_str="cpu", num_tests=40):
     print(f"Starting neural network metric test ({num_tests} tests)")
     general_metrics = Metrics().metric_funcs
     total_metrics = {"train": {metric_str: 0 for metric_str in general_metrics},
@@ -62,8 +61,7 @@ def test_neural_net(lang: Language, n_gen=5, n_items=3, device_str="cpu", num_te
     for i in range(num_tests):
         print(f"Currently running test {i + 1}")
         try:
-            neural_network = NeuralNet(lang, n_gen=n_gen, n_items=n_items, device_str=device_str,
-                                       lr=lr, num_epochs=num_epochs, batch_size=batch_size, **kwargs)
+            neural_network = NeuralNet(lang, hyperparams=hyperparams, device_str=device_str)
         except NeuralNetError as e:
             print(f"\nERROR: {e}\nThis test will not be counted, continuing with next one")
             bad_tests += 1
