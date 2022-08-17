@@ -1,32 +1,56 @@
 from language.rule import Rule
 from viewer.viewer import Viewer
 from object.object import PymLiz
-from language.parser import PymLizParser, GeneticParser
+from language.parser import Node, PymLizParser, GeneticParser
 from language.language import Language
 from random import choice
 from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
 from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
+from itertools import product
+from networkx import DiGraph
 
-#TODO extend check_graph_match_rec for not connected 
-
-def _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
+def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
+    if not target_root_node.constraints.issubset(root_node.constraints):
+        return False
     # Successor nodes are ordered by their "order" edge attribute in relation to their root node
-    target_suc_nodes = sorted(list(target_graph.successors(target_root_node)),
-                                key=lambda node: target_graph[target_root_node][node]["order"])
+    target_suc_nodes = sorted(tuple(target_graph.successors(target_root_node)),
+                              key=lambda node: target_graph[target_root_node][node]["order"])
     # If there are no more successor nodes in the target graph, we found everything we needed
     if not target_suc_nodes:
         return True
-    suc_nodes = sorted(list(graph.successors(root_node)),
-                        key=lambda node: graph[root_node][node]["order"])
+    suc_nodes = sorted(tuple(graph.successors(root_node)),
+                       key=lambda node: graph[root_node][node]["order"])
     if len(suc_nodes) != len(target_suc_nodes):
         return False
     for suc_node, target_suc_node in zip(suc_nodes, target_suc_nodes):
-        if (not target_suc_node.constraints.issubset(suc_node.constraints) or
-                not _check_graph_match_rec(graph, target_graph, suc_node, target_suc_node)):
+        if (not _check_graph_match_rec(graph, target_graph, suc_node, target_suc_node)):
             return False
     return True
 
+
+def _check_graph_match(graph: DiGraph, target_graph: DiGraph) -> bool:
+    """
+    Checks if ``graph`` "contains" ``target_graph``, meaning that ``target_graph`` and ``graph`` are isomorphic and 
+    each node in target_graph has constraints that are a subset of those in graph.
+    ``graph``'s nodes may have children that target_graph's nodes don't have, meaning that ``target_graph`` can be a
+    top node representation of ``graph``
+
+    Returns:
+        bool: Specifies whether ``graph`` contains ``target_graph``
+    """
+    if graph.out_degree("root_node") != target_graph.out_degree("root_node"):
+        return False
+    for root_node in graph.successors("root_node"):
+        found = False
+        for target_root_node in target_graph.successors("root_node"):
+            if _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
+                found = True
+                break
+        if not found:
+            return False
+    return True
+    
 class GeneticViewer(Viewer):
     """
     Genetic viewer class, implementing genetic selection and application of Rules
@@ -103,7 +127,7 @@ class GeneticViewer(Viewer):
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
                     from neural_net.training_generation import get_top_nodes_graph
-                    if _check_graph_match_rec(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph), "root_node", "root_node"):
+                    if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
                         print()
                         return new_obj.run()
                     scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
