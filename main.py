@@ -19,7 +19,7 @@ if __name__ == "__main__":
     modules = {"numpy": "np"}
 
     list1 = [1, 2, 3]
-    list2 = [2, 2, 4]
+    list2 = [2, 2, 15]
 
     lang = Language()
     lang.add_rules(convert_to_nparray, dot_product)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # utilities.util_funcs.test_neural_net(lang, {"n_gen": 20, "num_epochs": 300, "lr": 0.001}, device_str="cuda", num_tests=2)
     
-    viewer = GeneticViewer(lang, modules, n_iter=10, n_fittest=5, n_gen=10, 
+    viewer = GeneticViewer(lang, modules, n_iter=20, n_fittest=10, n_gen=20, 
                            fitness="neural_random", hyperparams={"n_gen": 20, "num_epochs": 300, "lr": 0.001}, device_str="cuda")
     obj = viewer.blob(list1, list2)
     output = GeneticParser("a", constraints={"a": "float"})
