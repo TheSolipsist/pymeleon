@@ -4,11 +4,11 @@ from object.object import PymLiz
 from language.parser import Node, PymLizParser, GeneticParser
 from language.language import Language
 from random import choice
-from utilities.util_funcs import save_graph
 from language.rule_search import RuleSearch
 from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
-from itertools import product
 from networkx import DiGraph
+from neural_net.training_generation import get_top_nodes_graph
+from utilities.util_funcs import save_graph
 
 def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
     if not target_root_node.constraints.issubset(root_node.constraints):
@@ -69,7 +69,7 @@ class GeneticViewer(Viewer):
     """
     def __init__(self,
                  language: Language,
-                 modules: dict = None,
+                 ext: dict = None,
                  n_iter: int = 10,
                  n_gen: int = 20,
                  n_fittest: int = 10,
@@ -79,9 +79,9 @@ class GeneticViewer(Viewer):
                  ) -> None :
         super().__init__(language)
         self._RuleSearch = RuleSearch()
-        if modules is None:
-            modules = dict()
-        self.modules = modules
+        if ext is None:
+            ext = dict()
+        self.ext = ext
         self.n_iter = n_iter
         self.n_gen = n_gen
         self.n_fittest = n_fittest
@@ -97,7 +97,7 @@ class GeneticViewer(Viewer):
         """
         Creates and returns the PymLiz object
         """
-        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, modules=self.modules)
+        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, ext=self.ext)
         return obj
 
     def view(self, obj: PymLiz, parser_obj: GeneticParser):
@@ -113,7 +113,7 @@ class GeneticViewer(Viewer):
             obj_list = [obj.copy() for __ in range(n_fittest)]
             scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
-                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
+                # print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
                     current_obj = obj_list[i]
                     chosen_rule = choice(rules)
@@ -126,9 +126,8 @@ class GeneticViewer(Viewer):
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
-                    from neural_net.training_generation import get_top_nodes_graph
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
-                        print()
+                        # print(f"\r{' '* 1000}")
                         return new_obj.run()
                     scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
                 obj_list.sort(key=scores.__getitem__, reverse=True)
@@ -142,7 +141,7 @@ class GeneticViewer(Viewer):
             if current_best_score > max_score:
                 max_score = current_best_score
                 best_obj = current_best_obj
-        print()
+        # print(f"\r{' '* 1000}")
         return best_obj.run()
 
     def search(self, rule: Rule, obj: PymLiz):

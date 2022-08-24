@@ -25,16 +25,16 @@ class RandomViewer(Viewer):
             a rule's input graph
     """
 
-    def __init__(self, language: Language, modules: dict = None) -> None:
+    def __init__(self, language: Language, ext: dict = None) -> None:
         super().__init__(language)
         self._RuleSearch = RuleSearch()
-        self.modules = modules
+        self.ext = ext
 
     def blob(self, *args) -> PymLiz:
         """
         Creates and returns the PymLiz object
         """
-        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, modules=self.modules)
+        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, ext=self.ext)
         return obj
 
     def view(self, obj: PymLiz):

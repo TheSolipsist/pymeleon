@@ -54,6 +54,7 @@ class Parser:
         "*": "__pymeleon_mul",
         "/": "__pymeleon_truediv",
         "^": "__pymeleon_power",
+        # ".": "__pymeleon_getattr"
     }
     SUPPORTED_OPERATORS_REVERSE = {v: k for k, v in SUPPORTED_OPERATORS.items()}
 

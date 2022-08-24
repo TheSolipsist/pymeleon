@@ -1,5 +1,6 @@
 from language.parser import Parser, PymLizParser
 from language.rule import Rule
+import ctypes
 
 
 class PymLiz:
@@ -10,7 +11,7 @@ class PymLiz:
         viewer: The viewer which creates the object
         parser_obj: The parser object representing the graph of the object to use
         constraint_types: All constraint types to check for the object's components
-        modules: All modules to be used when "running" the object (returning its value)
+        ext: All ext to be used when "running" the object (returning its value)
     
     -- Methods --
         search(rule): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
@@ -20,13 +21,13 @@ class PymLiz:
         view(): Calls the viewer's "view" method
     """
 
-    def __init__(self, viewer, parser_obj: PymLizParser, constraint_types=None, modules=None) -> None:
+    def __init__(self, viewer, parser_obj: PymLizParser, constraint_types=None, ext=None) -> None:
         self._parser_obj = parser_obj
         self._graph = parser_obj.graph
         self._viewer = viewer
-        if modules is None:
-            modules = dict()
-        self._modules = modules
+        if ext is None:
+            ext = dict()
+        self._ext = ext
         if constraint_types is None:
             constraint_types = dict()
         self._constraint_types = constraint_types
@@ -39,7 +40,7 @@ class PymLiz:
         return PymLiz(viewer=self._viewer,
                       parser_obj=self._parser_obj.copy(),
                       constraint_types=self._constraint_types.copy(),
-                      modules=self._modules.copy())
+                      ext=self._ext.copy())
 
     def get_graph(self):
         """
@@ -71,7 +72,7 @@ class PymLiz:
                     expression += self._deparse_component(node) + ","
                 return expression[:-1] + ")"
         else:
-            return str(starting_node.value)
+            return f"__pym_get_obj({id(starting_node.value)})"
 
     def apply(self, rule: Rule, transform_dict: dict, inplace=False):
         """
@@ -92,13 +93,13 @@ class PymLiz:
         """
         Returns the value represented by the object's graph
         """
-        for obj, obj_name in self._modules.items():
-            exec(f"import {obj} as {obj_name}")
+        def __pym_get_obj(obj_id):
+            return ctypes.cast(obj_id, ctypes.py_object).value
         connected_components = list(self._graph.successors("root_node"))
         result = []
         for node in connected_components:
             deparsed_component = self._deparse_component(node)
-            result.append(eval(deparsed_component))
+            result.append(eval(deparsed_component, self._ext | {"__pym_get_obj": __pym_get_obj}))
         if len(result) == 1:
             return result[0]
         else:
