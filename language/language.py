@@ -1,3 +1,7 @@
+"""
+Language module for pymeleon
+"""
+
 from language.rule import Rule
 
 
@@ -21,8 +25,9 @@ class Language:
         register(types: dict): Registers the given constraints (types) in this language
     """
 
-    def __init__(self, rules=None, types=None):
-        self.rules: list[Rule] = list()
+    def __init__(self, name: str = "default_lang__pym", rules: list[Rule] = None, types: dict = None):
+        self.name = name
+        self.rules = list()
         self.types = dict()
         if rules is not None:
             self.add_rules(rules)

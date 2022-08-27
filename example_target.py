@@ -9,11 +9,11 @@ def list2dict(x: list):
     return {v: 1 for v in x}
     
 G = nx.Graph()
-G.add_edge("a232", "b232")
-x = ["a232"]
+G.add_edge("node_a", "node_b")
+x = ["node_a"]
 
 viewer = Language(
-    Type("normalized": lambda x: pg.max(x) == 1),
+    Constraint({"normalized": lambda x: pg.max(x) == 1}),
     Rule(parse(pg.GraphSignal), parse("_.graph": nx.Graph)),
     Rule(parse(list), parse("list2dict(_)", {"list2dict": ("normalized", dict)})),
     Rule(parse({"a": nx.Graph, "b": dict}), parse("pg.to_signal(a, b)", {"pg.to_signal": ("normalized", "noinput", pg.GraphSignal)})),

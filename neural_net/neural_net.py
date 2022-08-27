@@ -3,7 +3,7 @@ Neural network implementation module
 """
 
 import itertools
-from time import perf_counter
+import pathlib
 # pymeleon modules
 from language.language import Language
 from language.parser import Node
@@ -11,6 +11,7 @@ from language.rule import Rule
 from neural_net.training_generation import TrainingGenerationRandom, TrainingGenerationExhaustive
 from neural_net.dataset import SequenceDataset
 from neural_net.metrics import Metrics
+from neural_net import pretrained_models_path
 # torch modules
 import torch
 from torch.utils.data import DataLoader, random_split
@@ -180,15 +181,18 @@ class NeuralNet:
                  language: Language,
                  hyperparams: dict = None,
                  device_str: str = "cpu",
-                 training_generation: str = "random"
+                 training_generation: str = "random",
+                 use_pretrained: bool = True
                  ) -> None:
         self.language = language
+        self.device = torch.device(device_str)
+        model_path = pretrained_models_path / f"__pymeleon_pretrained_model_{self.language.name}.pt"
+        if use_pretrained:
+            if self.load_pretrained_model(model_path):
+                return
         if hyperparams is None:
             hyperparams = dict()
-        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS.copy()
-        self.hyperparams["n_items"] = len(language.types)
-        self.hyperparams.update(hyperparams)
-        self.device = torch.device(device_str)
+        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(language.types)} | hyperparams
         self.metric_funcs = Metrics(loss_func=self.loss_function).metric_funcs
         if training_generation == "random":
             train_gen_obj = TrainingGenerationRandom(self.hyperparams["n_gen"], 
@@ -200,7 +204,15 @@ class NeuralNet:
             raise NeuralNetError("Training generation argument must be 'random' or 'exhaustive'")
         data = self._prepare_data(train_gen_obj.generate_training_data(language))
         dataloaders = self._init_net(data)
-        self._train(dataloaders)
+        self._train(dataloaders, model_path)
+
+    def load_pretrained_model(self, model_path: pathlib.Path):
+        if self.language.name == "default_lang__pym":
+            print("WARNING: Loading pretrained model for default language name")
+            if model_path.is_file():
+                self.model = torch.load(model_path)
+                self._graph_len = self.model[0].in_features // 2
+                return True
 
     def loss_function(self, 
                       data_tensors: torch.Tensor
@@ -223,8 +235,9 @@ class NeuralNet:
 
     def _prepare_data(self, data: list) -> list:
         """
-        Transforms the training graphs to their DFS representations and removes duplicates
+        Transforms the training graphs to their DFS representations
         """
+        print(f"\rPreparing data for training", end="")
         dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.language) for graph in graph_tuple)
                                           for graph_tuple in sample)
         data = list(map(dfs_sample, data))
@@ -232,6 +245,7 @@ class NeuralNet:
         fix_len_training_data(data, self._graph_len)
         data = [tuple(g_target + g_final for g_target, g_final in sample) for sample in data]
         # remove_duplicates(data)
+        print(f"\r{' ' * 60}", end="")
         return data
         
     def _init_net(self, data: list) -> dict[str, DataLoader]:
@@ -272,9 +286,9 @@ class NeuralNet:
                 metrics[dataset_str][metric_str] /= len(dataloader)
         return metrics
     
-    def _train(self, dataloaders: dict[str, DataLoader]) -> None:
+    def _train(self, dataloaders: dict[str, DataLoader], model_path: pathlib.Path) -> None:
         """
-        Trains the neural network
+        Trains the neural network and saves the trained model
 
         Args:
             ``dataloaders`` (dict[str, DataLoader]): Dictionary mapping the name of the split dataset to the dataloader
@@ -306,11 +320,12 @@ class NeuralNet:
             #     for dataset_str, metrics in self._calculate_metrics(dataloaders).items():
             #         for metric_str, metric in metrics.items():
             #             metrics_epoch[dataset_str][metric_str][epoch] = metric
-        print()
+        print(f"\rTraining complete {' ' * 50}", end="")
         if self.device.type == "cuda":
             torch.cuda.synchronize(self.device)
             self.model = self.model.to(device=torch.device("cpu"))
         self.metrics_epoch = metrics_epoch 
+        torch.save(self.model, model_path)
     
     def predict(self, graph_after: DiGraph, graph_final: DiGraph) -> float:
         representation = []

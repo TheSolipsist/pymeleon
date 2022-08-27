@@ -205,11 +205,18 @@ class TrainingGenerationRandom(TrainingGeneration):
         data = []   # The training data (each record is a list of 3 DiGraphs: the graph before the application of the Rule,
                     # the graph after the application of the Rule, and the graph after the application of multiple Rules
         initial_graph_list = generate_initial_graph_list(language.types, self.n_items)
+        total_nodes = sum(graph.number_of_nodes() for graph in initial_graph_list)
+        examined_nodes = 0
+        NUM_BARS = 20
         for graph in initial_graph_list:
+            num_bars_done = round((examined_nodes / total_nodes) * NUM_BARS)
+            print(f"\rGenerating training examples: |{num_bars_done * '='}{(NUM_BARS - num_bars_done) * ' '}|", end="")
+            examined_nodes += graph.number_of_nodes()
             chosen_rules = choices(language.rules, k=self.n_gen)
             sequence, rules_sequence = self.generate_sequence_random(graph, chosen_rules, rule_search)
             if sequence:
                 add_sequence_to_training_data(sequence, rules_sequence, data, language, rule_search, add_simple=True)
+        print(f"\r{' ' * 60}", end="")
         if not data:
             raise TrainingGenerationError("Training data could not be generated")
         return data

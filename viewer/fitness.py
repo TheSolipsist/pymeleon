@@ -1,14 +1,13 @@
 """
 Fitness module for the genetic viewer
 """
+
+import math
 # pymeleon modules
 from language.language import Language
 from neural_net.neural_net import NeuralNet, NeuralNetError
-from neural_net.training_generation import TrainingGeneration, TrainingGenerationRandom
 # networkx modules
 from networkx import DiGraph
-# Python Standard Library modules
-import math
 
 
 class Fitness:
@@ -126,13 +125,15 @@ class FitnessNeuralNet(Fitness):
                  language: Language,
                  hyperparams: dict = None,
                  device_str: str = "cpu",
-                 training_generation: str = "random"
+                 training_generation: str = "random",
+                 use_pretrained: bool = True
                  ) -> None:
         self.initial_graph = None
         self.model = NeuralNet(language=language,
                                hyperparams=hyperparams,
                                device_str=device_str,
-                               training_generation=training_generation)
+                               training_generation=training_generation,
+                               use_pretrained=use_pretrained)
     
     def fitness_score(self, graph: DiGraph, target_graph: DiGraph) -> float:
         """

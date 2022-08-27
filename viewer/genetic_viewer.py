@@ -70,11 +70,12 @@ class GeneticViewer(Viewer):
     def __init__(self,
                  language: Language,
                  ext: dict = None,
-                 n_iter: int = 10,
+                 n_iter: int = 100,
                  n_gen: int = 20,
-                 n_fittest: int = 10,
+                 n_fittest: int = 30,
                  fitness: str = "neural_random",
                  device_str: str = "cpu",
+                 use_pretrained: bool = True,
                  hyperparams: dict = None
                  ) -> None :
         super().__init__(language)
@@ -86,9 +87,17 @@ class GeneticViewer(Viewer):
         self.n_gen = n_gen
         self.n_fittest = n_fittest
         if fitness == "neural_random":
-            self.fitness_obj = FitnessNeuralNet(language, hyperparams, training_generation="random", device_str=device_str)
+            self.fitness_obj = FitnessNeuralNet(language, 
+                                                hyperparams, 
+                                                device_str=device_str,
+                                                training_generation="random", 
+                                                use_pretrained=use_pretrained,)
         elif fitness == "neural_exhaustive":
-            self.fitness_obj = FitnessNeuralNet(language, hyperparams, training_generation="exhaustive", device_str=device_str)
+            self.fitness_obj = FitnessNeuralNet(language, 
+                                                hyperparams, 
+                                                device_str=device_str, 
+                                                training_generation="exhaustive", 
+                                                use_pretrained=use_pretrained,)
         elif fitness == "heuristic":
             self.fitness_obj = FitnessHeuristic()
         self.fitness = self.fitness_obj.fitness_score
@@ -113,7 +122,7 @@ class GeneticViewer(Viewer):
             obj_list = [obj.copy() for __ in range(n_fittest)]
             scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
-                # print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
+                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
                     current_obj = obj_list[i]
                     chosen_rule = choice(rules)
@@ -127,7 +136,7 @@ class GeneticViewer(Viewer):
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
-                        # print(f"\r{' '* 1000}")
+                        print(f"\rTarget found{' '* 60}")
                         return new_obj.run()
                     scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
                 obj_list.sort(key=scores.__getitem__, reverse=True)
@@ -141,7 +150,7 @@ class GeneticViewer(Viewer):
             if current_best_score > max_score:
                 max_score = current_best_score
                 best_obj = current_best_obj
-        # print(f"\r{' '* 1000}")
+        print(f"\rTarget not found, returning closest object{' '* 60}")
         return best_obj.run()
 
     def search(self, rule: Rule, obj: PymLiz):
