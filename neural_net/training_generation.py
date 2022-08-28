@@ -1,12 +1,12 @@
 """
 Module for training data generation
 """
-from language.language import Language
-from language.parser import Node
+from DSL.DSL import DSL
+from DSL.parser import Node
 from networkx import DiGraph
 from random import choice, choices
-from language.rule import Rule
-from language.rule_search import RuleSearch
+from DSL.rule import Rule
+from DSL.rule_search import RuleSearch
 from itertools import combinations_with_replacement
 
 
@@ -86,7 +86,7 @@ def negative_sample(rules: list[Rule],
 def add_sequence_to_training_data(sequence: list[DiGraph], 
                                   rules_sequence: list[Rule],
                                   data: dict[str, list[DiGraph]],
-                                  language: Language,
+                                  DSL: DSL,
                                   rule_search: RuleSearch,
                                   add_simple: bool = True):
     """
@@ -96,13 +96,13 @@ def add_sequence_to_training_data(sequence: list[DiGraph],
         sequence: The (Graph_1, Graph_2, ..., Graph_n_gen) sequence
         rules_sequence: The (Rule_1, Rule_2, ..., Rule_[n_gen-1]) sequence
         data: The training data
-        language: The Language used
+        DSL: The DSL used
         add_simple: If True, for every training sample consisting of a (graph_before, graph_after, graph_final) \
             sequence, also add the (graph_before, graph_after, top_nodes_graph_final) sequence, in which the graph \
             top_nodes_graph_final consists of only the root nodes of graph_final (successor nodes of "root_node"). \
             For example, if graph_final is "f1(f3(a), b), f2(c,d)", then top_nodes_graph_final is "f1, f2".
     """
-    rules = language.rules
+    rules = DSL.rules
     if add_simple:
         top_nodes_sequence = tuple(get_top_nodes_graph(graph) for graph in sequence)
     for i in range(1, len(sequence)):
@@ -127,12 +127,12 @@ class TrainingGeneration:
     ### Abstract training generation class
     
     #### Abstract methods:
-        ``generate_training_data(language)``: Generates training data
+        ``generate_training_data(DSL)``: Generates training data
     """
     def __init__(self) -> None:
         pass
     
-    def generate_training_data(self, language: Language) -> tuple[list[list[int]], list[int], int]:
+    def generate_training_data(self, DSL: DSL) -> tuple[list[list[int]], list[int], int]:
         raise NotImplementedError("'generate_training_data' method not implemented")
     
 
@@ -148,7 +148,7 @@ class TrainingGenerationRandom(TrainingGeneration):
             range(n_items) nodes will be generated).
             
     Methods:
-        ``generate_training_data(language, n_gen, items)``: Returns the training data 
+        ``generate_training_data(DSL, n_gen, items)``: Returns the training data 
     """
     def __init__(self, 
                  n_gen: int,
@@ -191,12 +191,12 @@ class TrainingGenerationRandom(TrainingGeneration):
             sequence, rules_sequence = None, None
         return sequence, rules_sequence
     
-    def generate_training_data(self, language: Language) -> tuple[list[tuple[DiGraph]]]:
+    def generate_training_data(self, DSL: DSL) -> tuple[list[tuple[DiGraph]]]:
         """
-        Generates training data for a given language
+        Generates training data for a given DSL
 
         Args:
-            language: The language for which to generate training data
+            DSL: The DSL for which to generate training data
 
         Returns:
             list[tuple[DiGraph]]: The training data, containing 4-tuples of DiGraphs (graph_before, graph_after, graph_negative, graph_final)
@@ -204,7 +204,7 @@ class TrainingGenerationRandom(TrainingGeneration):
         rule_search = RuleSearch()
         data = []   # The training data (each record is a list of 3 DiGraphs: the graph before the application of the Rule,
                     # the graph after the application of the Rule, and the graph after the application of multiple Rules
-        initial_graph_list = generate_initial_graph_list(language.types, self.n_items)
+        initial_graph_list = generate_initial_graph_list(DSL.types, self.n_items)
         total_nodes = sum(graph.number_of_nodes() for graph in initial_graph_list)
         examined_nodes = 0
         NUM_BARS = 20
@@ -212,10 +212,10 @@ class TrainingGenerationRandom(TrainingGeneration):
             num_bars_done = round((examined_nodes / total_nodes) * NUM_BARS)
             print(f"\rGenerating training examples: |{num_bars_done * '='}{(NUM_BARS - num_bars_done) * ' '}|", end="")
             examined_nodes += graph.number_of_nodes()
-            chosen_rules = choices(language.rules, k=self.n_gen)
+            chosen_rules = choices(DSL.rules, k=self.n_gen)
             sequence, rules_sequence = self.generate_sequence_random(graph, chosen_rules, rule_search)
             if sequence:
-                add_sequence_to_training_data(sequence, rules_sequence, data, language, rule_search, add_simple=True)
+                add_sequence_to_training_data(sequence, rules_sequence, data, DSL, rule_search, add_simple=True)
         print(f"\r{' ' * 60}", end="")
         if not data:
             raise TrainingGenerationError("Training data could not be generated")
@@ -228,7 +228,7 @@ class TrainingGenerationExhaustive(TrainingGeneration):
         and all transform dicts for these rules
 
     Methods:
-        ``generate_training_data(language, n_gen, items)``: Returns the training data 
+        ``generate_training_data(DSL, n_gen, items)``: Returns the training data 
     """
     def __init__(self, 
                  n_gen: int, 
@@ -236,12 +236,12 @@ class TrainingGenerationExhaustive(TrainingGeneration):
         self.n_gen = n_gen
         self.n_items = n_items
     
-    def generate_training_data(self, language: Language) -> tuple[list[tuple[DiGraph]], list[int]]:
+    def generate_training_data(self, DSL: DSL) -> tuple[list[tuple[DiGraph]], list[int]]:
         """
-        Generates training data for a given language
+        Generates training data for a given DSL
 
         Args:
-            language: The language for which to generate training data
+            DSL: The DSL for which to generate training data
 
         Returns:
             list[tuple[DiGraph]]: The training data, containing 3-tuples of DiGraphs

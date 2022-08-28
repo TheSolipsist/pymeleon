@@ -1,9 +1,9 @@
-from language.parser import GeneticParser, RuleParser
-from language.rule import Rule
+from DSL.parser import GeneticParser, RuleParser
+from DSL.rule import Rule
 from viewer.genetic_viewer import GeneticViewer
 import pygrank as pg
 import networkx as nx
-from language.language import Language
+from DSL.DSL import DSL
 
 NOINPUT = lambda x: False
 
@@ -20,7 +20,7 @@ G = nx.Graph()
 G.add_edge("a232", "b232")
 x = ["a232"]
 
-lang = Language()
+lang = DSL()
 lang.add_rules(Rule(RuleParser("a", constraints={"a": "GraphSignal"}),
                     RuleParser("a.graph", constraints={"a.graph": "Graph"})),
                Rule(RuleParser("a", constraints={"a": "List"}),

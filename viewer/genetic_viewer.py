@@ -1,10 +1,10 @@
-from language.rule import Rule
+from DSL.rule import Rule
 from viewer.viewer import Viewer
 from object.object import PymLiz
-from language.parser import Node, PymLizParser, GeneticParser
-from language.language import Language
+from DSL.parser import Node, PymLizParser, GeneticParser
+from DSL.DSL import DSL
 from random import choice
-from language.rule_search import RuleSearch
+from DSL.rule_search import RuleSearch
 from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 from networkx import DiGraph
 from neural_net.training_generation import get_top_nodes_graph
@@ -56,10 +56,10 @@ class GeneticViewer(Viewer):
     Genetic viewer class, implementing genetic selection and application of Rules
     
     -- Parameters --
-        language(Language): The language object from which to find Rules
+        DSL(DSL): The DSL object from which to find Rules
         
     -- Attributes --
-        language(Language): The viewer's language
+        DSL(DSL): The viewer's DSL
         
     -- Methods --
         blob(*args): Creates and returns the PymLiz object
@@ -68,7 +68,7 @@ class GeneticViewer(Viewer):
             a rule's input graph
     """
     def __init__(self,
-                 language: Language,
+                 DSL: DSL,
                  ext: dict = None,
                  n_iter: int = 100,
                  n_gen: int = 20,
@@ -78,7 +78,7 @@ class GeneticViewer(Viewer):
                  use_pretrained: bool = True,
                  hyperparams: dict = None
                  ) -> None :
-        super().__init__(language)
+        super().__init__(DSL)
         self._RuleSearch = RuleSearch()
         if ext is None:
             ext = dict()
@@ -87,13 +87,13 @@ class GeneticViewer(Viewer):
         self.n_gen = n_gen
         self.n_fittest = n_fittest
         if fitness == "neural_random":
-            self.fitness_obj = FitnessNeuralNet(language, 
+            self.fitness_obj = FitnessNeuralNet(DSL, 
                                                 hyperparams, 
                                                 device_str=device_str,
                                                 training_generation="random", 
                                                 use_pretrained=use_pretrained,)
         elif fitness == "neural_exhaustive":
-            self.fitness_obj = FitnessNeuralNet(language, 
+            self.fitness_obj = FitnessNeuralNet(DSL, 
                                                 hyperparams, 
                                                 device_str=device_str, 
                                                 training_generation="exhaustive", 
@@ -106,7 +106,7 @@ class GeneticViewer(Viewer):
         """
         Creates and returns the PymLiz object
         """
-        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, ext=self.ext)
+        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.DSL.types, ext=self.ext)
         return obj
 
     def view(self, obj: PymLiz, parser_obj: GeneticParser):
@@ -114,7 +114,7 @@ class GeneticViewer(Viewer):
         Returns the object's output after having changed it according to the viewer's function
         """
         target_graph = parser_obj.get_graph()
-        rules = self.language.rules
+        rules = self.DSL.rules
         max_score = float("-inf")
         n_iter = self.n_iter
         n_fittest = self.n_fittest

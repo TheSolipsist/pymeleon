@@ -4,7 +4,7 @@ Fitness module for the genetic viewer
 
 import math
 # pymeleon modules
-from language.language import Language
+from DSL.DSL import DSL
 from neural_net.neural_net import NeuralNet, NeuralNetError
 # networkx modules
 from networkx import DiGraph
@@ -105,7 +105,7 @@ class FitnessNeuralNet(Fitness):
     ### Neural net fitness class for use with the GeneticViewer
 
     #### Parameters
-        ``language``: Language to be used
+        ``DSL``: DSL to be used
         ``n_gen``: Number of consecutive rules to be applied to the initial graphs when generating
             the training data
         ``n_items``: Maximum number of items to create initial graphs from when generating the training data
@@ -122,14 +122,14 @@ class FitnessNeuralNet(Fitness):
                 ``initial_graph``, graph_after is ``graph`` and graph_final is ``target_graph``
     """
     def __init__(self,
-                 language: Language,
+                 DSL: DSL,
                  hyperparams: dict = None,
                  device_str: str = "cpu",
                  training_generation: str = "random",
                  use_pretrained: bool = True
                  ) -> None:
         self.initial_graph = None
-        self.model = NeuralNet(language=language,
+        self.model = NeuralNet(DSL=DSL,
                                hyperparams=hyperparams,
                                device_str=device_str,
                                training_generation=training_generation,

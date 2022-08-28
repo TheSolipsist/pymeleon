@@ -1,11 +1,11 @@
-from language.rule import Rule
+from DSL.rule import Rule
 from viewer.viewer import Viewer
 from object.object import PymLiz
-from language.parser import PymLizParser
-from language.language import Language
+from DSL.parser import PymLizParser
+from DSL.DSL import DSL
 from random import choice
 from utilities.util_funcs import save_graph
-from language.rule_search import RuleSearch
+from DSL.rule_search import RuleSearch
 
 
 class RandomViewer(Viewer):
@@ -13,10 +13,10 @@ class RandomViewer(Viewer):
     Random viewer class, implementing random selection and application of Rules
     
     -- Parameters --
-        language(Language): The language object from which to find Rules
+        DSL(DSL): The DSL object from which to find Rules
         
     -- Attributes --
-        language(Language): The viewer's language
+        DSL(DSL): The viewer's DSL
         
     -- Methods --
         blob(*args): Creates and returns the PymLiz object
@@ -25,8 +25,8 @@ class RandomViewer(Viewer):
             a rule's input graph
     """
 
-    def __init__(self, language: Language, ext: dict = None) -> None:
-        super().__init__(language)
+    def __init__(self, DSL: DSL, ext: dict = None) -> None:
+        super().__init__(DSL)
         self._RuleSearch = RuleSearch()
         self.ext = ext
 
@@ -34,14 +34,14 @@ class RandomViewer(Viewer):
         """
         Creates and returns the PymLiz object
         """
-        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.language.types, ext=self.ext)
+        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.DSL.types, ext=self.ext)
         return obj
 
     def view(self, obj: PymLiz):
         """
         Returns the object after having changed it according to the viewer's function
         """
-        rules = self.language.rules
+        rules = self.DSL.rules
         for _ in range(100):
             chosen_rule = choice(rules)
             transform_dicts = tuple(self.search(chosen_rule, obj))

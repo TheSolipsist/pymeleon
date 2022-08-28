@@ -1,8 +1,8 @@
-from language.parser import GeneticParser, RuleParser
-from language.rule import Rule
+from DSL.parser import GeneticParser, RuleParser
+from DSL.rule import Rule
 from viewer.genetic_viewer import GeneticViewer
 import numpy as np
-from language.language import Language
+from DSL.DSL import DSL
 import neural_net
 
 
@@ -29,10 +29,10 @@ ext = {"np": np,
 list1 = [1.3, 2, 3]
 list2 = [2, 2.5, 15]
 
-lang = Language()
+lang = DSL()
 lang.add_rules(convert_to_nparray, dot_product, float_to_int)
 lang.add_types(constraint_types)
-# Or we could say Language(rules=[convert_to_nparray, dot_product], types=constraint_types)
+# Or we could say DSL(rules=[convert_to_nparray, dot_product], types=constraint_types)
 
 viewer = GeneticViewer(lang, ext, hyperparams={"num_epochs": 200}, device_str="cuda", use_pretrained=True)
 obj = viewer.blob(list1, list2)

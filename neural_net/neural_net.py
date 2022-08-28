@@ -5,9 +5,9 @@ Neural network implementation module
 import itertools
 import pathlib
 # pymeleon modules
-from language.language import Language
-from language.parser import Node
-from language.rule import Rule
+from DSL.DSL import DSL, DEFAULT_DSL_NAME
+from DSL.parser import Node
+from DSL.rule import Rule
 from neural_net.training_generation import TrainingGenerationRandom, TrainingGenerationExhaustive
 from neural_net.dataset import SequenceDataset
 from neural_net.metrics import Metrics
@@ -27,7 +27,7 @@ def node_representation(node: Node, constraint_types: dict) -> list:
     """
     Returns a node representation
 
-    A node is represented by a (len(language.types) + 1)-int vector of its constraint types and its order (which is
+    A node is represented by a (len(DSL.types) + 1)-int vector of its constraint types and its order (which is
     added in the dfs_component_representation_rec function)
     """
     representation = []
@@ -54,7 +54,7 @@ def dfs_component_representation_rec(graph: DiGraph, root_node: Node, constraint
         dfs_component_representation_rec(graph, node, constraint_types, visited_nodes, representation)
 
 
-def dfs_representation(graph: DiGraph, language: Language) -> tuple:
+def dfs_representation(graph: DiGraph, DSL: DSL) -> tuple:
     """
     Returns a Depth First Search representation of a graph
 
@@ -65,7 +65,7 @@ def dfs_representation(graph: DiGraph, language: Language) -> tuple:
     
     if graph is None:
         return tuple()
-    constraint_types = language.types
+    constraint_types = DSL.types
     components = []
     max_num = float("-inf")
     for node in graph.successors("root_node"):
@@ -90,16 +90,16 @@ def hash_graph_representation(representation: list, base: int) -> int:
     return graph_hash
 
 
-def create_rule_representations(language_rules: list[Rule]) -> dict:
+def create_rule_representations(DSL_rules: list[Rule]) -> dict:
     """
     Creates the Rule representations dictionary
 
-    A Rule is represented as a one-hot vector in the domain of a language's rules
+    A Rule is represented as a one-hot vector in the domain of a DSL's rules
     """
     representations = dict()
-    for lang_rule_i in language_rules:
+    for lang_rule_i in DSL_rules:
         rule_representation = []
-        for lang_rule_to_check in language_rules:
+        for lang_rule_to_check in DSL_rules:
             rule_representation.append(int(lang_rule_i is lang_rule_to_check))
         representations[lang_rule_i] = rule_representation
     return representations
@@ -149,12 +149,12 @@ class NeuralNet:
     Neural network implementation for usage with the Genetic Viewer as its fitness function
 
     Parameters
-        ``language``: Language to be used.
+        ``DSL``: DSL to be used.
         ``hyperparams``: Dictionary holding any of the following hyperparameters
             ``n_gen``: Number of consecutive rules to be applied to the initial graphs when generating \
                 the training data. Defaults to 20.
             ``n_items``: Maximum number of items to create initial graphs from when generating the training \
-                data. Defaults to len(language.types).
+                data. Defaults to len(DSL.types).
             ``lr``: Learning rate. Defaults to 0.0001.
             ``num_epochs``: Number of epochs to iterate through while training the network. Defaults to 1000.
             ``batch_size``: The batch size to use while iterating through the training and testing data. \
@@ -168,7 +168,7 @@ class NeuralNet:
     """
     DEFAULT_HYPERPARAMS = {
         "n_gen": 20,
-        "n_items": None, # Initialized to len(language.types) for each NeuralNet instance
+        "n_items": None, # Initialized to len(DSL.types) for each NeuralNet instance
         "lr": 0.0001,
         "prev_reg": 0.1,
         "num_epochs": 1000,
@@ -178,21 +178,21 @@ class NeuralNet:
     
     def __init__(
                  self,
-                 language: Language,
+                 DSL: DSL,
                  hyperparams: dict = None,
                  device_str: str = "cpu",
                  training_generation: str = "random",
                  use_pretrained: bool = True
                  ) -> None:
-        self.language = language
+        self.DSL = DSL
         self.device = torch.device(device_str)
-        model_path = pretrained_models_path / f"__pymeleon_pretrained_model_{self.language.name}.pt"
+        model_path = pretrained_models_path / f"__pymeleon_pretrained_model_{self.DSL.name}.pt"
         if use_pretrained:
             if self.load_pretrained_model(model_path):
                 return
         if hyperparams is None:
             hyperparams = dict()
-        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(language.types)} | hyperparams
+        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(DSL.types)} | hyperparams
         self.metric_funcs = Metrics(loss_func=self.loss_function).metric_funcs
         if training_generation == "random":
             train_gen_obj = TrainingGenerationRandom(self.hyperparams["n_gen"], 
@@ -202,13 +202,13 @@ class NeuralNet:
                                                          self.hyperparams["n_items"])
         else:
             raise NeuralNetError("Training generation argument must be 'random' or 'exhaustive'")
-        data = self._prepare_data(train_gen_obj.generate_training_data(language))
+        data = self._prepare_data(train_gen_obj.generate_training_data(DSL))
         dataloaders = self._init_net(data)
         self._train(dataloaders, model_path)
 
     def load_pretrained_model(self, model_path: pathlib.Path):
-        if self.language.name == "default_lang__pym":
-            print("WARNING: Loading pretrained model for default language name")
+        if self.DSL.name == DEFAULT_DSL_NAME:
+            print("WARNING: Loading pretrained model for default DSL name")
             if model_path.is_file():
                 self.model = torch.load(model_path)
                 self._graph_len = self.model[0].in_features // 2
@@ -238,7 +238,7 @@ class NeuralNet:
         Transforms the training graphs to their DFS representations
         """
         print(f"\rPreparing data for training", end="")
-        dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.language) for graph in graph_tuple)
+        dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.DSL) for graph in graph_tuple)
                                           for graph_tuple in sample)
         data = list(map(dfs_sample, data))
         self._graph_len = max_len_training_data(data)
@@ -331,7 +331,7 @@ class NeuralNet:
         representation = []
         graphs = [graph_after, graph_final]
         for graph in graphs:
-            graph_repr = dfs_representation(graph, self.language)
+            graph_repr = dfs_representation(graph, self.DSL)
             if len(graph_repr) > self._graph_len:
                 raise NeuralNetError(f"Graph {graph} has more than allowed nodes ({len(graph_repr)}"\
                                      f", maximum allowed are {self._graph_len})")

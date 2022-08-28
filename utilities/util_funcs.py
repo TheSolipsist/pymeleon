@@ -4,10 +4,10 @@ import functools
 import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
-from language.language import Language
-from language.parser import Node
-from language.rule import Rule
-from language.rule_search import RuleSearch
+from DSL.DSL import DSL
+from DSL.parser import Node
+from DSL.rule import Rule
+from DSL.rule_search import RuleSearch
 from neural_net.neural_net import NeuralNet, NeuralNetError
 from neural_net.metrics import Metrics
 import torch
@@ -52,7 +52,7 @@ def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = F
         plt.savefig(filename, dpi=600)
     plt.close()
 
-def test_neural_net(lang: Language, hyperparams: dict, device_str="cpu", num_tests=40):
+def test_neural_net(lang: DSL, hyperparams: dict, device_str="cpu", num_tests=40):
     print(f"Starting neural network metric test ({num_tests} tests)")
     general_metrics = Metrics().metric_funcs
     total_metrics = {"train": {metric_str: 0 for metric_str in general_metrics},
@@ -107,13 +107,13 @@ def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = No
         fig.savefig(f"results/{metric_str}_{i}.png", dpi=150)
         plt.close(fig)
     
-def test_rules(language: Language) -> None:
+def test_rules(DSL: DSL) -> None:
     rule_search = RuleSearch()
-    rules = language.rules
+    rules = DSL.rules
     graph = DiGraph()
-    for type in language.types:
+    for type in DSL.types:
         graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
-    num_originals = len(language.types)
+    num_originals = len(DSL.types)
     while True:
         save_graph(graph, print=True, show_constraints=True)
         while True:

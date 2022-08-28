@@ -1,6 +1,6 @@
-from language.rule import Rule
+from DSL.rule import Rule
 from object.object import PymLiz
-from language.language import Language
+from DSL.DSL import DSL
 
 
 class Viewer:
@@ -8,10 +8,10 @@ class Viewer:
     Abstract viewer class
     
     -- Parameters --
-        language(Language): The language object from which to find Rules
+        DSL(DSL): The DSL object from which to find Rules
         
     -- Attributes --
-        language(Language): The viewer's language
+        DSL(DSL): The viewer's DSL
         
     -- Methods --
         blob(*args): Creates and returns the PymLiz object
@@ -20,8 +20,8 @@ class Viewer:
             a rule's input graph
     """
 
-    def __init__(self, language: Language):
-        self.language = language
+    def __init__(self, DSL: DSL):
+        self.DSL = DSL
 
     def blob(self, *args):
         raise NotImplementedError("'blob' method not implemented")

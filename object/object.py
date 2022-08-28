@@ -1,5 +1,5 @@
-from language.parser import Parser, PymLizParser
-from language.rule import Rule
+from DSL.parser import Parser, PymLizParser
+from DSL.rule import Rule
 import ctypes
 
 

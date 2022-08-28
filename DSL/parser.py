@@ -1,3 +1,4 @@
+from typing import Callable
 import networkx as nx
 
 
@@ -54,6 +55,11 @@ class Parser:
         "*": "__pymeleon_mul",
         "/": "__pymeleon_truediv",
         "^": "__pymeleon_power",
+        "==": "__pymeleon_eq",
+        ">": "__pymeleon_gt",
+        ">=": "__pymeleon_ge",
+        "<": "__pymeleon_lt",
+        "<=": "__pymeleon_le",
         # ".": "__pymeleon_getattr"
     }
     SUPPORTED_OPERATORS_REVERSE = {v: k for k, v in SUPPORTED_OPERATORS.items()}
@@ -303,3 +309,21 @@ class GeneticParser(RuleParser):
 
     def get_graph(self) -> nx.DiGraph:
         return self.graph
+
+
+class Predicate:
+    """
+    Predicate class implementing DSL constraints
+    """
+    def __init__(self, name: str, func: Callable):
+        if not isinstance(name, str):
+            raise ParsingError("Predicate's name must be a string")
+        if not isinstance(func, Callable):
+            raise ParsingError("Predicate's function must be a Callable")
+        self.type = {name: func}
+
+
+def parse(*args):
+    if len(args) == 1:
+        if isinstance(args[0], type):
+            pass
