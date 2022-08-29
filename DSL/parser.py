@@ -68,6 +68,18 @@ class Parser:
         raise NotImplementedError("Abstract Parser __init__ should not be called")
 
 
+def _get_constraint_name(constraint: type | str) -> str:
+    """
+    Get the constraint name representation of an object to use as a node's constraint
+    """
+    if isinstance(constraint, str):
+        return constraint
+    elif isinstance(constraint, type):
+        return f"__pymeleon_constraint_name_{repr(constraint)}"
+    else:
+        raise ParsingError("Attempted to get constraint name for a non str or type object")
+    
+    
 def fix_constraints(constraints):
     """
     Returns a fixed constraints dict (each value should be an iterable yielding constraint types)
@@ -76,6 +88,7 @@ def fix_constraints(constraints):
         node_constraints = constraints[node_value]
         if not isinstance(node_constraints, (list, tuple, set)):
             constraints[node_value] = (node_constraints,)
+        constraints[node_value] = tuple(map(_get_constraint_name, constraints[node_value]))
     return constraints
 
 
@@ -252,7 +265,8 @@ class RuleParser(Parser):
         variables_constants: Set containing all variables and constants in the expression
         functions: Set containing all functions in the expression
     """
-
+    DEFAULT_SINGLE_INPUT_NAME = "_"
+    
     def __init__(self, *args, constraints=None) -> None:
         self.functions, self.variables_constants = set(), set()
         self._args = args
@@ -315,7 +329,7 @@ class Predicate:
     """
     Predicate class implementing DSL constraints
     """
-    def __init__(self, name: str, func: Callable):
+    def __init__(self, name: str, func: Callable) -> None:
         if not isinstance(name, str):
             raise ParsingError("Predicate's name must be a string")
         if not isinstance(func, Callable):
@@ -323,7 +337,25 @@ class Predicate:
         self.type = {name: func}
 
 
-def parse(*args):
+def parse(*args) -> RuleParser:
+    """
+    Parses a series of objects or expression for Rule creation
+    
+    -- Arguments --
+        *args: Must be either a single dict or type argument, or a series of str arguments followed by a dict
+
+    """
     if len(args) == 1:
         if isinstance(args[0], type):
-            pass
+            return RuleParser(RuleParser.DEFAULT_SINGLE_INPUT_NAME, 
+                              constraints={RuleParser.DEFAULT_SINGLE_INPUT_NAME: _get_constraint_name(args[0])})
+        elif isinstance(args[0], dict):
+            return RuleParser(*args[0], constraints=args[0])
+        else:
+            raise ParsingError("When providing 'parse' with a single argument, it must be a type or a dict")
+    return RuleParser(args)
+    
+    
+            
+        
+    

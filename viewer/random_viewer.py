@@ -1,11 +1,11 @@
-from DSL.rule import Rule
+from dsl.rule import Rule
 from viewer.viewer import Viewer
 from object.object import PymLiz
-from DSL.parser import PymLizParser
-from DSL.DSL import DSL
+from dsl.parser import PymLizParser
+from dsl.dsl import DSL
 from random import choice
 from utilities.util_funcs import save_graph
-from DSL.rule_search import RuleSearch
+from dsl.rule_search import RuleSearch
 
 
 class RandomViewer(Viewer):

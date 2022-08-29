@@ -1,6 +1,6 @@
-from DSL.rule import Rule
+from dsl.rule import Rule
 from object.object import PymLiz
-from DSL.DSL import DSL
+from dsl.dsl import DSL
 
 
 class Viewer:

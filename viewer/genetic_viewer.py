@@ -1,10 +1,10 @@
-from DSL.rule import Rule
+from dsl.rule import Rule
 from viewer.viewer import Viewer
 from object.object import PymLiz
-from DSL.parser import Node, PymLizParser, GeneticParser
-from DSL.DSL import DSL
+from dsl.parser import Node, PymLizParser, GeneticParser
+from dsl.dsl import DSL
 from random import choice
-from DSL.rule_search import RuleSearch
+from dsl.rule_search import RuleSearch
 from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 from networkx import DiGraph
 from neural_net.training_generation import get_top_nodes_graph

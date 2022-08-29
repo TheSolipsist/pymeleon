@@ -5,9 +5,9 @@ Neural network implementation module
 import itertools
 import pathlib
 # pymeleon modules
-from DSL.DSL import DSL, DEFAULT_DSL_NAME
-from DSL.parser import Node
-from DSL.rule import Rule
+from dsl.dsl import DSL, DEFAULT_DSL_NAME
+from dsl.parser import Node
+from dsl.rule import Rule
 from neural_net.training_generation import TrainingGenerationRandom, TrainingGenerationExhaustive
 from neural_net.dataset import SequenceDataset
 from neural_net.metrics import Metrics

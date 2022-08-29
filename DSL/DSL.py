@@ -2,7 +2,7 @@
 DSL module for pymeleon
 """
 
-from DSL.rule import Rule
+from dsl.rule import Rule
 from parser import Predicate
 
 class DSLError(Exception):

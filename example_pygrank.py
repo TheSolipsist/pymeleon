@@ -1,9 +1,9 @@
-from DSL.parser import GeneticParser, RuleParser
-from DSL.rule import Rule
+from dsl.parser import GeneticParser, RuleParser
+from dsl.rule import Rule
 from viewer.genetic_viewer import GeneticViewer
 import pygrank as pg
 import networkx as nx
-from DSL.DSL import DSL
+from dsl.dsl import DSL
 
 NOINPUT = lambda x: False
 

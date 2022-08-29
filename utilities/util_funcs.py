@@ -4,10 +4,10 @@ import functools
 import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
-from DSL.DSL import DSL
-from DSL.parser import Node
-from DSL.rule import Rule
-from DSL.rule_search import RuleSearch
+from dsl.dsl import DSL
+from dsl.parser import Node
+from dsl.rule import Rule
+from dsl.rule_search import RuleSearch
 from neural_net.neural_net import NeuralNet, NeuralNetError
 from neural_net.metrics import Metrics
 import torch
