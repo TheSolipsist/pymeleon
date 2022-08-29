@@ -107,13 +107,13 @@ def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = No
         fig.savefig(f"results/{metric_str}_{i}.png", dpi=150)
         plt.close(fig)
     
-def test_rules(DSL: DSL) -> None:
+def test_rules(dsl: DSL) -> None:
     rule_search = RuleSearch()
-    rules = DSL.rules
+    rules = dsl.rules
     graph = DiGraph()
-    for type in DSL.types:
+    for type in dsl.types:
         graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
-    num_originals = len(DSL.types)
+    num_originals = len(dsl.types)
     while True:
         save_graph(graph, print=True, show_constraints=True)
         while True:

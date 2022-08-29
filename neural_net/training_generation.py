@@ -86,7 +86,7 @@ def negative_sample(rules: list[Rule],
 def add_sequence_to_training_data(sequence: list[DiGraph], 
                                   rules_sequence: list[Rule],
                                   data: dict[str, list[DiGraph]],
-                                  DSL: DSL,
+                                  dsl: DSL,
                                   rule_search: RuleSearch,
                                   add_simple: bool = True):
     """
@@ -102,7 +102,7 @@ def add_sequence_to_training_data(sequence: list[DiGraph],
             top_nodes_graph_final consists of only the root nodes of graph_final (successor nodes of "root_node"). \
             For example, if graph_final is "f1(f3(a), b), f2(c,d)", then top_nodes_graph_final is "f1, f2".
     """
-    rules = DSL.rules
+    rules = dsl.rules
     if add_simple:
         top_nodes_sequence = tuple(get_top_nodes_graph(graph) for graph in sequence)
     for i in range(1, len(sequence)):
@@ -132,7 +132,7 @@ class TrainingGeneration:
     def __init__(self) -> None:
         pass
     
-    def generate_training_data(self, DSL: DSL) -> tuple[list[list[int]], list[int], int]:
+    def generate_training_data(self, dsl: DSL) -> tuple[list[list[int]], list[int], int]:
         raise NotImplementedError("'generate_training_data' method not implemented")
     
 
@@ -191,7 +191,7 @@ class TrainingGenerationRandom(TrainingGeneration):
             sequence, rules_sequence = None, None
         return sequence, rules_sequence
     
-    def generate_training_data(self, DSL: DSL) -> tuple[list[tuple[DiGraph]]]:
+    def generate_training_data(self, dsl: DSL) -> tuple[list[tuple[DiGraph]]]:
         """
         Generates training data for a given DSL
 
@@ -204,7 +204,7 @@ class TrainingGenerationRandom(TrainingGeneration):
         rule_search = RuleSearch()
         data = []   # The training data (each record is a list of 3 DiGraphs: the graph before the application of the Rule,
                     # the graph after the application of the Rule, and the graph after the application of multiple Rules
-        initial_graph_list = generate_initial_graph_list(DSL.types, self.n_items)
+        initial_graph_list = generate_initial_graph_list(dsl.types, self.n_items)
         total_nodes = sum(graph.number_of_nodes() for graph in initial_graph_list)
         examined_nodes = 0
         NUM_BARS = 20
@@ -212,10 +212,10 @@ class TrainingGenerationRandom(TrainingGeneration):
             num_bars_done = round((examined_nodes / total_nodes) * NUM_BARS)
             print(f"\rGenerating training examples: |{num_bars_done * '='}{(NUM_BARS - num_bars_done) * ' '}|", end="")
             examined_nodes += graph.number_of_nodes()
-            chosen_rules = choices(DSL.rules, k=self.n_gen)
+            chosen_rules = choices(dsl.rules, k=self.n_gen)
             sequence, rules_sequence = self.generate_sequence_random(graph, chosen_rules, rule_search)
             if sequence:
-                add_sequence_to_training_data(sequence, rules_sequence, data, DSL, rule_search, add_simple=True)
+                add_sequence_to_training_data(sequence, rules_sequence, data, dsl, rule_search, add_simple=True)
         print(f"\r{' ' * 60}", end="")
         if not data:
             raise TrainingGenerationError("Training data could not be generated")
@@ -236,7 +236,7 @@ class TrainingGenerationExhaustive(TrainingGeneration):
         self.n_gen = n_gen
         self.n_items = n_items
     
-    def generate_training_data(self, DSL: DSL) -> tuple[list[tuple[DiGraph]], list[int]]:
+    def generate_training_data(self, dsl: DSL) -> tuple[list[tuple[DiGraph]], list[int]]:
         """
         Generates training data for a given DSL
 

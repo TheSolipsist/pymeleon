@@ -25,8 +25,8 @@ class RandomViewer(Viewer):
             a rule's input graph
     """
 
-    def __init__(self, DSL: DSL, ext: dict = None) -> None:
-        super().__init__(DSL)
+    def __init__(self, dsl: DSL, ext: dict = None) -> None:
+        self.dsl = dsl
         self._RuleSearch = RuleSearch()
         self.ext = ext
 
@@ -34,14 +34,14 @@ class RandomViewer(Viewer):
         """
         Creates and returns the PymLiz object
         """
-        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.DSL.types, ext=self.ext)
+        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.dsl.types, ext=self.ext)
         return obj
 
     def view(self, obj: PymLiz):
         """
         Returns the object after having changed it according to the viewer's function
         """
-        rules = self.DSL.rules
+        rules = self.dsl.rules
         for _ in range(100):
             chosen_rule = choice(rules)
             transform_dicts = tuple(self.search(chosen_rule, obj))

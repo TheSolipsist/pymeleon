@@ -122,14 +122,14 @@ class FitnessNeuralNet(Fitness):
                 ``initial_graph``, graph_after is ``graph`` and graph_final is ``target_graph``
     """
     def __init__(self,
-                 DSL: DSL,
+                 dsl: DSL,
                  hyperparams: dict = None,
                  device_str: str = "cpu",
                  training_generation: str = "random",
                  use_pretrained: bool = True
                  ) -> None:
         self.initial_graph = None
-        self.model = NeuralNet(DSL=DSL,
+        self.model = NeuralNet(dsl=dsl,
                                hyperparams=hyperparams,
                                device_str=device_str,
                                training_generation=training_generation,

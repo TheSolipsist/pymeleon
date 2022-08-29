@@ -2,8 +2,9 @@
 DSL module for pymeleon
 """
 
+from typing import Callable
 from dsl.rule import Rule
-from parser import Predicate
+from dsl.parser import Predicate
 
 class DSLError(Exception):
     pass
@@ -44,8 +45,9 @@ class DSL:
         for arg in args:
             if isinstance(arg, Rule):
                 self._add_rule(arg)
+                self.add_types(arg._parser_obj_in.constraints_func_dict)
             elif isinstance(arg, Predicate):
-                self._add_types(arg.type)
+                self.add_types(arg.type)
             else:
                 raise DSLError("The DSL constructor receives a str (the DSL's name) as an optional first argument \
                                 and every other argument must be a Predicate or a Rule")
@@ -64,7 +66,6 @@ class DSL:
 
     def add_types(self, types: dict):
         for type_name, func in types.items():
-            if not isinstance(type_name, str) or not hasattr(func, "__call__"):
+            if not isinstance(type_name, str) or not isinstance(func, Callable):
                 raise TypeError("add_types dict must be a str to function dict")
         self._add_types(types)
-

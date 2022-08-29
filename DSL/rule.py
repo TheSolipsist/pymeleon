@@ -4,6 +4,8 @@ Rule module
 from networkx import DiGraph
 from collections import defaultdict
 
+from dsl.parser import RuleParser
+
 
 class BadGraph(Exception):
     """
@@ -28,7 +30,11 @@ class Rule:
     -- Methods --
         apply(graph): Applies the rule to the specified graph
     """
-    def __init__(self, parser_obj_in, parser_obj_out, other_node_dict=None, operator_dict=None) -> None:
+    def __init__(self, 
+                 parser_obj_in: RuleParser, 
+                 parser_obj_out: RuleParser, 
+                 other_node_dict=None, 
+                 operator_dict=None) -> None:
         self._parser_obj_in = parser_obj_in
         self._parser_obj_out = parser_obj_out
 

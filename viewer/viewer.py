@@ -1,6 +1,5 @@
 from dsl.rule import Rule
 from object.object import PymLiz
-from dsl.dsl import DSL
 
 
 class Viewer:
@@ -8,10 +7,10 @@ class Viewer:
     Abstract viewer class
     
     -- Parameters --
-        DSL(DSL): The DSL object from which to find Rules
+        pass
         
     -- Attributes --
-        DSL(DSL): The viewer's DSL
+        pass
         
     -- Methods --
         blob(*args): Creates and returns the PymLiz object
@@ -19,10 +18,6 @@ class Viewer:
         search(rule, obj): Iterates through the possible subgraphs (in the form of transform_dicts) that match 
             a rule's input graph
     """
-
-    def __init__(self, DSL: DSL):
-        self.DSL = DSL
-
     def blob(self, *args):
         raise NotImplementedError("'blob' method not implemented")
 

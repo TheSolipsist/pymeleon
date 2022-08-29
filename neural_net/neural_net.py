@@ -54,7 +54,7 @@ def dfs_component_representation_rec(graph: DiGraph, root_node: Node, constraint
         dfs_component_representation_rec(graph, node, constraint_types, visited_nodes, representation)
 
 
-def dfs_representation(graph: DiGraph, DSL: DSL) -> tuple:
+def dfs_representation(graph: DiGraph, dsl: DSL) -> tuple:
     """
     Returns a Depth First Search representation of a graph
 
@@ -65,7 +65,7 @@ def dfs_representation(graph: DiGraph, DSL: DSL) -> tuple:
     
     if graph is None:
         return tuple()
-    constraint_types = DSL.types
+    constraint_types = dsl.types
     components = []
     max_num = float("-inf")
     for node in graph.successors("root_node"):
@@ -178,21 +178,21 @@ class NeuralNet:
     
     def __init__(
                  self,
-                 DSL: DSL,
+                 dsl: DSL,
                  hyperparams: dict = None,
                  device_str: str = "cpu",
                  training_generation: str = "random",
                  use_pretrained: bool = True
                  ) -> None:
-        self.DSL = DSL
+        self.dsl = dsl
         self.device = torch.device(device_str)
-        model_path = pretrained_models_path / f"__pymeleon_pretrained_model_{self.DSL.name}.pt"
+        model_path = pretrained_models_path / f"__pymeleon_pretrained_model_{self.dsl.name}.pt"
         if use_pretrained:
             if self.load_pretrained_model(model_path):
                 return
         if hyperparams is None:
             hyperparams = dict()
-        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(DSL.types)} | hyperparams
+        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(dsl.types)} | hyperparams
         self.metric_funcs = Metrics(loss_func=self.loss_function).metric_funcs
         if training_generation == "random":
             train_gen_obj = TrainingGenerationRandom(self.hyperparams["n_gen"], 
@@ -202,17 +202,17 @@ class NeuralNet:
                                                          self.hyperparams["n_items"])
         else:
             raise NeuralNetError("Training generation argument must be 'random' or 'exhaustive'")
-        data = self._prepare_data(train_gen_obj.generate_training_data(DSL))
+        data = self._prepare_data(train_gen_obj.generate_training_data(dsl))
         dataloaders = self._init_net(data)
         self._train(dataloaders, model_path)
 
     def load_pretrained_model(self, model_path: pathlib.Path):
-        if self.DSL.name == DEFAULT_DSL_NAME:
+        if self.dsl.name == DEFAULT_DSL_NAME:
             print("WARNING: Loading pretrained model for default DSL name")
-            if model_path.is_file():
-                self.model = torch.load(model_path)
-                self._graph_len = self.model[0].in_features // 2
-                return True
+        if model_path.is_file():
+            self.model = torch.load(model_path)
+            self._graph_len = self.model[0].in_features // 2
+            return True
 
     def loss_function(self, 
                       data_tensors: torch.Tensor
@@ -238,7 +238,7 @@ class NeuralNet:
         Transforms the training graphs to their DFS representations
         """
         print(f"\rPreparing data for training", end="")
-        dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.DSL) for graph in graph_tuple)
+        dfs_sample = lambda sample: tuple(tuple(dfs_representation(graph, self.dsl) for graph in graph_tuple)
                                           for graph_tuple in sample)
         data = list(map(dfs_sample, data))
         self._graph_len = max_len_training_data(data)
@@ -331,7 +331,7 @@ class NeuralNet:
         representation = []
         graphs = [graph_after, graph_final]
         for graph in graphs:
-            graph_repr = dfs_representation(graph, self.DSL)
+            graph_repr = dfs_representation(graph, self.dsl)
             if len(graph_repr) > self._graph_len:
                 raise NeuralNetError(f"Graph {graph} has more than allowed nodes ({len(graph_repr)}"\
                                      f", maximum allowed are {self._graph_len})")
