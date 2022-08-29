@@ -321,7 +321,7 @@ def _get_constraint_name(constraint: str | type) -> str:
     if isinstance(constraint, str):
         return constraint
     elif isinstance(constraint, type):
-        return f"__pymeleon_constraint_name_{repr(constraint)}"
+        return f"__pymeleon_constraint_name_{constraint.__module__}_{constraint.__name__}"
     else:
         raise ParsingError("Attempted to get constraint name for a non str or type object")
     
