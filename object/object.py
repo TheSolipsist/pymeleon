@@ -1,4 +1,4 @@
-from dsl.parser import Parser, PymLizParser
+from dsl.parser import Parser, PymLizParser, RuleParser
 from dsl.rule import Rule
 import ctypes
 
@@ -104,3 +104,6 @@ class PymLiz:
             return result[0]
         else:
             return result
+
+    def __rshift__(self, right: RuleParser):
+        return self.view(right)

@@ -1,4 +1,3 @@
-from time import perf_counter
 from dsl.rule import Rule
 from viewer.genetic_viewer import GeneticViewer
 import pygrank as pg
@@ -18,10 +17,13 @@ x = ["node_a"]
 
 viewer = DSL(
     Predicate("normalized", lambda x: pg.max(x) == 1),
-    Rule(parse(pg.GraphSignal), parse({"get_graph(_)": nx.Graph})),
+    Rule(parse(pg.GraphSignal), parse("get_graph(_)", {"get_graph": nx.Graph})),
     Rule(parse(list), parse("list2dict(_)", {"list2dict": ("normalized", dict)})),
     Rule(parse({"a": nx.Graph, "b": dict}), parse("pg.to_signal(a, b)", {"pg.to_signal": ("normalized", "noinput", pg.GraphSignal)})),
-) >> GeneticViewer({"list2dict": list2dict, "pg": pg, "get_graph": get_graph}, use_pretrained=False)
+) >> GeneticViewer({"list2dict": list2dict, "pg": pg, "get_graph": get_graph}, 
+                   use_pretrained=False,
+                   device_str="cuda",
+                   hyperparams={"num_epochs": 100})
 
-# result = viewer(G, x) >> parse({"a": "OUT", "b": "GraphSignal"})
-# print(result)
+result = viewer(G, x) >> parse({"a": "noinput", "b": pg.GraphSignal})
+print(result)

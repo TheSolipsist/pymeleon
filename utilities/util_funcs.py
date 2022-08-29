@@ -111,9 +111,9 @@ def test_rules(dsl: DSL) -> None:
     rule_search = RuleSearch()
     rules = dsl.rules
     graph = DiGraph()
-    for type in dsl.types:
+    for type in dsl.in_types:
         graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
-    num_originals = len(dsl.types)
+    num_originals = len(dsl.in_types)
     while True:
         save_graph(graph, print=True, show_constraints=True)
         while True:

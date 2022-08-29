@@ -192,7 +192,7 @@ class NeuralNet:
                 return
         if hyperparams is None:
             hyperparams = dict()
-        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(dsl.types)} | hyperparams
+        self.hyperparams = NeuralNet.DEFAULT_HYPERPARAMS | {"n_items": len(dsl.in_types)} | hyperparams
         self.metric_funcs = Metrics(loss_func=self.loss_function).metric_funcs
         if training_generation == "random":
             train_gen_obj = TrainingGenerationRandom(self.hyperparams["n_gen"], 

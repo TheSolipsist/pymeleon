@@ -204,7 +204,7 @@ class TrainingGenerationRandom(TrainingGeneration):
         rule_search = RuleSearch()
         data = []   # The training data (each record is a list of 3 DiGraphs: the graph before the application of the Rule,
                     # the graph after the application of the Rule, and the graph after the application of multiple Rules
-        initial_graph_list = generate_initial_graph_list(dsl.types, self.n_items)
+        initial_graph_list = generate_initial_graph_list(dsl.in_types, self.n_items)
         total_nodes = sum(graph.number_of_nodes() for graph in initial_graph_list)
         examined_nodes = 0
         NUM_BARS = 20

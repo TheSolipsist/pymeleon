@@ -302,18 +302,6 @@ class PymLizParser(Parser):
         return PymLizParser(*self.args)
 
 
-class GeneticParser(RuleParser):
-    """
-    Parser to use with Genetic (or other) viewers
-    """
-
-    def __init__(self, *args, constraints=None):
-        super().__init__(*args, constraints=constraints)
-
-    def get_graph(self) -> nx.DiGraph:
-        return self.graph
-
-
 class Predicate:
     """
     Predicate class implementing DSL constraints
@@ -326,14 +314,34 @@ class Predicate:
         self.type = {name: func}
 
 
-def _get_constraint_name(constraint: type) -> str:
+def _get_constraint_name(constraint: str | type) -> str:
     """
     Get the constraint name representation of an object to use as a node's constraint
     """
-    if isinstance(constraint, type):
+    if isinstance(constraint, str):
+        return constraint
+    elif isinstance(constraint, type):
         return f"__pymeleon_constraint_name_{repr(constraint)}"
     else:
-        raise ParsingError("Attempted to get constraint name for a non type object")
+        raise ParsingError("Attempted to get constraint name for a non str or type object")
+    
+
+def _get_constraints_name_dict(constraints: dict):
+    """
+    Given a constraints dict, returns a dict that maps any [k: str, v: str|type] pair to a [k: str, v: str] pair
+    """
+    return {node_name: tuple(map(_get_constraint_name, constraint_types)) 
+            for node_name, constraint_types in constraints.items()}
+    
+def _get_constraints_func_dict(constraints: dict):
+    """
+    Given a constraints dict, returns a dict that maps any [k: str, constraint_types: tuple[str|type]] pair to 
+    a [constraint_type_name: str, lambda x: isinstance(x, constraint_type)] pair
+    """
+    return {_get_constraint_name(constraint_type): lambda x: isinstance(x, constraint_type)
+            for constraint_types in constraints.values()
+            for constraint_type in constraint_types
+            if isinstance(constraint_type, type)}
     
     
 def parse(*args, constraints: dict = None) -> RuleParser:
@@ -344,36 +352,36 @@ def parse(*args, constraints: dict = None) -> RuleParser:
         *args: Must be either a single dict or type argument, or an arbitrary number of str arguments followed by \
                a dict
     """
-    if len(args) == 1:
+    if constraints is None:
+        try:
+            if isinstance(args[-1], dict):
+                constraints = args[-1]
+                args = args[:-1]
+            else:
+                constraints = dict()
+        except IndexError:
+            return RuleParser("")
+    for k, v in constraints.items():
+        if not isinstance(v, list | tuple | set):
+            constraints[k] = (v,)
+    if not all(map(lambda x: isinstance(x[0], str) and all(map(lambda y: isinstance(y, str | type), x[1])), 
+                    constraints.items())):
+        raise ParsingError("parse() constraints must be a dict['str', 'str'|'type']")
+    if (not args) and constraints:
+        return RuleParser(*constraints,
+                          constraints=_get_constraints_name_dict(constraints),
+                          constraints_func_dict=_get_constraints_func_dict(constraints))
+    elif len(args) == 1 and not constraints:
         if isinstance(args[0], type):
             constraint_name = _get_constraint_name(args[0])
             return RuleParser(RuleParser.DEFAULT_SINGLE_INPUT_NAME, 
                               constraints={RuleParser.DEFAULT_SINGLE_INPUT_NAME: constraint_name},
                               constraints_func_dict={constraint_name: lambda x: isinstance(x, args[0])})
-        elif isinstance(args[0], dict):
-            
-            return RuleParser(*args[0], 
-                              constraints=args[0],
-                              constraints_func_dict={constraint_name: lambda x: isinstance(x, args[0])})
-        else:
-            raise ParsingError("When providing 'parse' with a single argument, it must be a type or a dict")
-    if constraints is None and isinstance(args[-1], dict):
-        constraints = args[-1]
-        args = args[:-1]
-    if (not all(map(lambda x: isinstance(x, str | type), args))):
-        raise ParsingError("'parse' takes an arbitrary number of str/type arguments and an optional dict mapping any \
+        raise ParsingError("When providing parse() with a single argument, it must be a type or a constraints dict")
+    if (not all(map(lambda x: isinstance(x, str), args))):
+        raise ParsingError("parse() takes an arbitrary number of str arguments and an optional dict mapping any \
                             of them to a type or str")
-    constraints_func_dict = dict()
-    for arg in args:
-        if isinstance(arg, type):
-            constraints_func_dict[_get_constraint_name(arg)] = lambda x: isinstance(x, arg)
-        elif isinstance(arg, str):
-            pass
-        else:
-            raise ParsingError
-    return RuleParser(*args, constraints=constraints)
-    
-    
-            
-        
+    return RuleParser(*args, 
+                      constraints=_get_constraints_name_dict(constraints),
+                      constraints_func_dict=_get_constraints_func_dict(constraints))
     

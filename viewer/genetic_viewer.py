@@ -1,7 +1,7 @@
 from dsl.rule import Rule
 from viewer.viewer import Viewer
 from object.object import PymLiz
-from dsl.parser import Node, PymLizParser, GeneticParser
+from dsl.parser import Node, PymLizParser, RuleParser
 from dsl.dsl import DSL
 from random import choice
 from dsl.rule_search import RuleSearch
@@ -117,11 +117,11 @@ class GeneticViewer(Viewer):
         obj = PymLiz(self, PymLizParser(*args), constraint_types=self.dsl.types, ext=self.ext)
         return obj
 
-    def view(self, obj: PymLiz, parser_obj: GeneticParser):
+    def view(self, obj: PymLiz, parser_obj: RuleParser):
         """
         Returns the object's output after having changed it according to the viewer's function
         """
-        target_graph = parser_obj.get_graph()
+        target_graph = parser_obj.graph
         rules = self.dsl.rules
         max_score = float("-inf")
         n_iter = self.n_iter
@@ -169,6 +169,11 @@ class GeneticViewer(Viewer):
 
     def __rrshift__(self, left: DSL):
         self.add_dsl(left)
+        return self
     
     def __lshift__(self, right: DSL):
         self.add_dsl(right)
+        return self
+
+    def __call__(self, *args):
+        return self.blob(*args)
