@@ -1,14 +1,14 @@
-from dsl.rule import Rule
-from viewer.viewer import Viewer
-from object.object import PymLiz
-from dsl.parser import Node, PymLizParser, RuleParser
-from dsl.dsl import DSL
+from pymeleon.dsl.rule import Rule
+from pymeleon.viewer.viewer import Viewer
+from pymeleon.object.object import PymLiz
+from pymeleon.dsl.parser import Node, PymLizParser, RuleParser
+from pymeleon.dsl.dsl import DSL
 from random import choice
-from dsl.rule_search import RuleSearch
-from viewer.fitness import FitnessHeuristic, FitnessNeuralNet
+from pymeleon.dsl.rule_search import RuleSearch
+from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 from networkx import DiGraph
-from neural_net.training_generation import get_top_nodes_graph
-from utilities.util_funcs import save_graph
+from pymeleon.neural_net.training_generation import get_top_nodes_graph
+
 
 def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
     if not target_root_node.constraints.issubset(root_node.constraints):
@@ -68,7 +68,7 @@ class GeneticViewer(Viewer):
             a rule's input graph
     """
     def __init__(self,
-                 ext: dict = None,
+                 ext: set | list | dict = None,
                  dsl: DSL = None,
                  n_iter: int = 100,
                  n_gen: int = 20,
@@ -81,6 +81,8 @@ class GeneticViewer(Viewer):
         self._RuleSearch = RuleSearch()
         if ext is None:
             ext = dict()
+        if isinstance(ext, list) or isinstance(ext, set):
+            ext = {external.__name__: external for external in ext}
         self.ext = ext
         self.n_iter = n_iter
         self.n_gen = n_gen
@@ -114,7 +116,7 @@ class GeneticViewer(Viewer):
         """
         Creates and returns the PymLiz object
         """
-        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.dsl.types, ext=self.ext)
+        obj = PymLiz(self, PymLizParser(*args), constraint_types=self.dsl.types, ext=self.ext | self.dsl.ext)
         return obj
 
     def view(self, obj: PymLiz, parser_obj: RuleParser):

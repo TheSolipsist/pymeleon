@@ -3,8 +3,8 @@ DSL module for pymeleon
 """
 
 from typing import Callable
-from dsl.rule import Rule
-from dsl.parser import Predicate
+from pymeleon.dsl.rule import Rule
+from pymeleon.dsl.parser import Predicate
 
 class DSLError(Exception):
     pass
@@ -40,6 +40,7 @@ class DSL:
         self.types = dict()
         self.in_types = dict()
         self.out_types = dict()
+        self.ext = dict()
         if name:
             if not isinstance(name, str):
                 raise DSLError("The DSL constructor requires a 'str' for its 'name' keyword argument")
@@ -64,6 +65,8 @@ class DSL:
             
     def _add_rule(self, rule: Rule):
         self.rules.append(rule)
+        if rule.ext is not None:
+            self.ext = self.ext | rule.ext
 
     def _add_types(self, types: dict):
         self.types |= types

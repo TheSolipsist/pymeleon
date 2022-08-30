@@ -1,5 +1,5 @@
-from dsl.parser import Parser, PymLizParser, RuleParser
-from dsl.rule import Rule
+from pymeleon.dsl.parser import Parser, PymLizParser, RuleParser
+from pymeleon.dsl.rule import Rule
 import ctypes
 
 

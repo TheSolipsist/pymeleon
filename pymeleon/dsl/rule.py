@@ -4,7 +4,7 @@ Rule module
 from networkx import DiGraph
 from collections import defaultdict
 
-from dsl.parser import RuleParser
+from pymeleon.dsl.parser import RuleParser
 
 
 class BadGraph(Exception):
@@ -22,6 +22,7 @@ class Rule:
         parser_obj_in: The parser object representing the graph that the rule can be applied to
         parser_obj_out: The parser object representing the graph after the application of the rule
         other_node_dict: Dictionary mapping input to output nodes that are not inferrable by variable names
+        ext: A dictionary of external dependencies that are gathered by DSLs and are eventually passed to viewers.
     
     -- Attributes --
         node_dict: Dictionary mapping nodes from the generic input graph to the generic output graph (1-n)
@@ -34,7 +35,8 @@ class Rule:
                  parser_obj_in: RuleParser, 
                  parser_obj_out: RuleParser, 
                  other_node_dict=None, 
-                 operator_dict=None) -> None:
+                 operator_dict=None,
+                 ext=None) -> None:
         self._parser_obj_in = parser_obj_in
         self._parser_obj_out = parser_obj_out
 
@@ -47,6 +49,8 @@ class Rule:
         self._funcs_out = parser_obj_out.functions
 
         self._create_node_dict(other_node_dict, operator_dict)
+
+        self.ext = ext
     
     def __str__(self):
         return f"{str(self._parser_obj_in)}\nTRANSFORMS TO\n{str(self._parser_obj_out)}"

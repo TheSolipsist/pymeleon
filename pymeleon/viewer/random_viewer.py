@@ -1,11 +1,11 @@
-from dsl.rule import Rule
-from viewer.viewer import Viewer
-from object.object import PymLiz
-from dsl.parser import PymLizParser
-from dsl.dsl import DSL
+from pymeleon.dsl.rule import Rule
+from pymeleon.viewer.viewer import Viewer
+from pymeleon.object import PymLiz
+from pymeleon.dsl.parser import PymLizParser
+from pymeleon.dsl.dsl import DSL
 from random import choice
-from utilities.util_funcs import save_graph
-from dsl.rule_search import RuleSearch
+from pymeleon.utilities.util_funcs import save_graph
+from pymeleon.dsl.rule_search import RuleSearch
 
 
 class RandomViewer(Viewer):

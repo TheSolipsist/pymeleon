@@ -4,8 +4,8 @@ Fitness module for the genetic viewer
 
 import math
 # pymeleon modules
-from dsl.dsl import DSL
-from neural_net.neural_net import NeuralNet, NeuralNetError
+from pymeleon.dsl.dsl import DSL
+from pymeleon.neural_net.neural_net import NeuralNet, NeuralNetError
 # networkx modules
 from networkx import DiGraph
 

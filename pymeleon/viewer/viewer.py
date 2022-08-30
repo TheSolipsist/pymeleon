@@ -1,5 +1,5 @@
-from dsl.rule import Rule
-from object.object import PymLiz
+from pymeleon.dsl.rule import Rule
+from pymeleon.object.object import PymLiz
 
 
 class Viewer:
