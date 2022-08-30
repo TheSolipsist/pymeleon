@@ -3,7 +3,7 @@ from pymeleon.viewer.viewer import Viewer
 from pymeleon.object.object import PymLiz
 from pymeleon.dsl.parser import Node, PymLizParser, RuleParser
 from pymeleon.dsl.dsl import DSL
-from random import choice
+from random import choice, seed
 from pymeleon.dsl.rule_search import RuleSearch
 from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 from networkx import DiGraph
@@ -71,8 +71,8 @@ class GeneticViewer(Viewer):
                  ext: set | list | dict = None,
                  dsl: DSL = None,
                  n_iter: int = 100,
-                 n_gen: int = 20,
-                 n_fittest: int = 30,
+                 n_gen: int = 10,
+                 n_fittest: int = 50,
                  fitness: str = "neural_random",
                  device_str: str = "cpu",
                  use_pretrained: bool = True,
@@ -129,6 +129,7 @@ class GeneticViewer(Viewer):
         n_iter = self.n_iter
         n_fittest = self.n_fittest
         for i_iter in range(n_iter):
+            seed(i_iter)
             obj_list = [obj.copy() for __ in range(n_fittest)]
             scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
@@ -146,7 +147,7 @@ class GeneticViewer(Viewer):
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
-                        print(f"\rTarget found{' '* 60}")
+                        print(f"\r{' '* 60}\r", end="")
                         return new_obj.run()
                     scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
                 obj_list.sort(key=scores.__getitem__, reverse=True)

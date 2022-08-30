@@ -210,7 +210,7 @@ class TrainingGenerationRandom(TrainingGeneration):
         NUM_BARS = 20
         for graph in initial_graph_list:
             num_bars_done = round((examined_nodes / total_nodes) * NUM_BARS)
-            print(f"\rGenerating training examples: |{num_bars_done * '='}{(NUM_BARS - num_bars_done) * ' '}|", end="")
+            print(f"\rGenerating DSL examples {num_bars_done * '■'}{(NUM_BARS - num_bars_done) * '-'}", end="")
             examined_nodes += graph.number_of_nodes()
             chosen_rules = choices(dsl.rules, k=self.n_gen)
             sequence, rules_sequence = self.generate_sequence_random(graph, chosen_rules, rule_search)
