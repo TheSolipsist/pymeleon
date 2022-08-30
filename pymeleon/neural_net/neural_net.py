@@ -252,6 +252,7 @@ class NeuralNet:
         """
         Initializes the network for training
         """
+        print(f"\rInitializing neural network for training", end="")
         self.model = torch.nn.Sequential(
             torch.nn.Linear(self._graph_len * 2, 64),
             torch.nn.ReLU(),
@@ -270,6 +271,7 @@ class NeuralNet:
         # x_val, x_test = train_test_split(x_test, train_size=0.5)
         # validation_set = SequenceDataset(x_val, y_val, device=self.device)
         batch_size = self.hyperparams["batch_size"]
+        print(f"\r{' ' * 60}", end="")
         return {"train": DataLoader(train_set, batch_size=min(train_size, batch_size), shuffle=True), 
                 "test": DataLoader(test_set, batch_size=min(test_size, batch_size), shuffle=False)}
     

@@ -25,7 +25,7 @@ def get_top_nodes_graph(graph: DiGraph) -> DiGraph:
     return top_nodes_graph
 
 
-def generate_graph_from_constraint_types(constraint_types: tuple[str]):
+def generate_graph_from_constraint_types(constraint_types: set[str]):
     """
     Generates a graph that is composed of a tuple of constraint types
     """
@@ -36,7 +36,7 @@ def generate_graph_from_constraint_types(constraint_types: tuple[str]):
     return graph
 
 
-def generate_initial_graph_list(constraint_types: dict, n_items: int) -> list[DiGraph]:
+def generate_initial_graph_list(constraint_types: set, n_items: int) -> list[DiGraph]:
     """
     Generates the initial graph list
 
