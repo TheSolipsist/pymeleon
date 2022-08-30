@@ -20,7 +20,7 @@ viewer = pym.DSL(
     pym.autorule(list2dict),
     pym.autorule(str2list),
     pym.Rule(pym.parse({"graph": nx.Graph, "data": dict}),
-         pym.parse("pg.to_signal(graph, data)", {"pg.to_signal": ("noinput", pg.GraphSignal)})),
+             pym.parse("pg.to_signal(graph, data)", {"pg.to_signal": ("noinput", pg.GraphSignal)})),
 ) >> pym.GeneticViewer({"pg": pg}, use_pretrained=True)
 
 G = nx.Graph()

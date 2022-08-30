@@ -1,4 +1,4 @@
-from pymeleon.dsl.parser import GeneticParser, RuleParser
+from pymeleon.dsl.parser import RuleParser
 from pymeleon.dsl.rule import Rule
 from pymeleon.viewer.genetic_viewer import GeneticViewer
 import numpy as np
@@ -35,5 +35,5 @@ lang.add_types(constraint_types)
 
 viewer = GeneticViewer(lang, ext, hyperparams={"num_epochs": 200}, device_str="cuda", use_pretrained=True)
 obj = viewer.blob(list1, list2)
-target_out = GeneticParser("a", constraints={"a": "int"})
+target_out = RuleParser("a", constraints={"a": "int"})
 print(obj.view(target_out))

@@ -1,4 +1,4 @@
-from pymeleon.dsl.parser import GeneticParser, RuleParser
+from pymeleon.dsl.parser import RuleParser
 from pymeleon.dsl.rule import Rule
 from pymeleon.viewer.genetic_viewer import GeneticViewer
 import pygrank as pg
@@ -32,5 +32,5 @@ lang.add_types(constraint_types)
 
 viewer = GeneticViewer(lang, {"list2dict": list2dict, "pg": pg})
 obj = viewer.blob(G, x)
-target_out = GeneticParser("a", constraints={"a": ("OUT", "GraphSignal")})
+target_out = RuleParser("a", constraints={"a": ("OUT", "GraphSignal")})
 print(obj.view(target_out))
