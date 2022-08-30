@@ -208,7 +208,7 @@ class NeuralNet:
 
     def load_pretrained_model(self, model_path: pathlib.Path):
         if self.dsl.name == DEFAULT_DSL_NAME:
-            print("WARNING: Loading pretrained model for default DSL name")
+            print("WARNING: Attempting to load pretrained model for default DSL name")
         if model_path.is_file():
             self.model = torch.load(model_path)
             self._graph_len = self.model[0].in_features // 2

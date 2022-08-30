@@ -54,19 +54,22 @@ class DSL:
         for arg in args:
             if isinstance(arg, Rule):
                 self._add_rule(arg)
-                self.in_types |= arg._parser_obj_in.constraints_func_dict
-                self.out_types |= arg._parser_obj_out.constraints_func_dict
             elif isinstance(arg, Predicate):
                 self.add_types(arg.type)
             else:
                 raise DSLError("The DSL constructor receives a str (the DSL's name) as an optional first argument \
                                 and every other argument must be a Predicate or a Rule")
-        self.types = self.in_types | self.out_types
             
     def _add_rule(self, rule: Rule):
         self.rules.append(rule)
+<<<<<<< HEAD:pymeleon/dsl/dsl.py
         if rule.ext is not None:
             self.ext = self.ext | rule.ext
+=======
+        self.in_types |= rule._parser_obj_in.constraints_func_dict
+        self.out_types |= rule._parser_obj_out.constraints_func_dict
+        self.types |= (self.in_types | self.out_types)
+>>>>>>> 10c95b4771503b5e2c532406c28922bcf3fda3d0:DSL/DSL.py
 
     def _add_types(self, types: dict):
         self.types |= types
