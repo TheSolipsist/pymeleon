@@ -62,14 +62,11 @@ class DSL:
             
     def _add_rule(self, rule: Rule):
         self.rules.append(rule)
-<<<<<<< HEAD:pymeleon/dsl/dsl.py
         if rule.ext is not None:
             self.ext = self.ext | rule.ext
-=======
         self.in_types |= rule._parser_obj_in.constraints_func_dict
         self.out_types |= rule._parser_obj_out.constraints_func_dict
         self.types |= (self.in_types | self.out_types)
->>>>>>> 10c95b4771503b5e2c532406c28922bcf3fda3d0:DSL/DSL.py
 
     def _add_types(self, types: dict):
         self.types |= types
