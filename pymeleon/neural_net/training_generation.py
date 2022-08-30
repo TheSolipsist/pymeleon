@@ -1,12 +1,12 @@
 """
 Module for training data generation
 """
-from dsl.dsl import DSL
-from dsl.parser import Node
+from pymeleon.dsl.dsl import DSL
+from pymeleon.dsl.parser import Node
 from networkx import DiGraph
 from random import choice, choices
-from dsl.rule import Rule
-from dsl.rule_search import RuleSearch
+from pymeleon.dsl.rule import Rule
+from pymeleon.dsl.rule_search import RuleSearch
 from itertools import combinations_with_replacement
 
 

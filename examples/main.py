@@ -1,9 +1,8 @@
-from dsl.parser import GeneticParser, RuleParser
-from dsl.rule import Rule
-from viewer.genetic_viewer import GeneticViewer
+from pymeleon.dsl.parser import GeneticParser, RuleParser
+from pymeleon.dsl.rule import Rule
+from pymeleon.viewer.genetic_viewer import GeneticViewer
 import numpy as np
-from dsl.dsl import DSL
-import neural_net
+from pymeleon.dsl.dsl import DSL
 
 
 def float2int(x: float):

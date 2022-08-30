@@ -5,13 +5,13 @@ Neural network implementation module
 import itertools
 import pathlib
 # pymeleon modules
-from dsl.dsl import DSL, DEFAULT_DSL_NAME
-from dsl.parser import Node
-from dsl.rule import Rule
-from neural_net.training_generation import TrainingGenerationRandom, TrainingGenerationExhaustive
-from neural_net.dataset import SequenceDataset
-from neural_net.metrics import Metrics
-from neural_net import pretrained_models_path
+from pymeleon.dsl.dsl import DSL, DEFAULT_DSL_NAME
+from pymeleon.dsl.parser import Node
+from pymeleon.dsl.rule import Rule
+from pymeleon.neural_net.training_generation import TrainingGenerationRandom, TrainingGenerationExhaustive
+from pymeleon.neural_net.dataset import SequenceDataset
+from pymeleon.neural_net.metrics import Metrics
+from pymeleon.neural_net import pretrained_models_path
 # torch modules
 import torch
 from torch.utils.data import DataLoader, random_split
@@ -171,7 +171,7 @@ class NeuralNet:
         "n_items": None, # Initialized to len(DSL.types) for each NeuralNet instance
         "lr": 0.0001,
         "prev_reg": 0.1,
-        "num_epochs": 1000,
+        "num_epochs": 200,
         "batch_size": 2**16,
         "weight_decay": 1.e-4
     }

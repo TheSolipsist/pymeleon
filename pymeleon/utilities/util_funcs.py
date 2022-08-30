@@ -4,12 +4,12 @@ import functools
 import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
-from dsl.dsl import DSL
-from dsl.parser import Node
-from dsl.rule import Rule
-from dsl.rule_search import RuleSearch
-from neural_net.neural_net import NeuralNet, NeuralNetError
-from neural_net.metrics import Metrics
+from pymeleon.dsl.dsl import DSL
+from pymeleon.dsl.parser import Node
+from pymeleon.dsl.rule import Rule
+from pymeleon.dsl.rule_search import RuleSearch
+from pymeleon.neural_net.neural_net import NeuralNet, NeuralNetError
+from pymeleon.neural_net import Metrics
 import torch
 
 
