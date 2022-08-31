@@ -24,11 +24,11 @@ viewer = pym.DSL(
     pym.autorule(list2dict),
     pym.autorule(str2list),
     pym.autorule(concat),
-    pym.Rule(pym.parse({"graph": nx.Graph, "data": dict}),
-             pym.parse("pg.to_signal(graph, data)", {"pg.to_signal": ("noinput", pg.GraphSignal)})),
+    pym.parse({"graph": nx.Graph, "data": dict})
+    | pym.parse("pg.to_signal(graph, data)", {"pg.to_signal": ("noinput", pg.GraphSignal)}),
 ).set_name("pygrank") >> pym.GeneticViewer({"pg": pg}, use_pretrained=True)
+
 
 G = nx.Graph()
 G.add_edge("node_a", "node_b")
-result = viewer(G, "node_a", "node_b") >> pym.parse(pg.GraphSignal)
-print(result)
+result = viewer(G, "node_a", "node_b") >> pym.tuple(pg.GraphSignal, str)

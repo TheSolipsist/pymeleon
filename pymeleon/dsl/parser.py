@@ -1,6 +1,8 @@
 from typing import Callable
 import networkx as nx
 
+from pymeleon.dsl.rule import Rule
+
 
 class Wrapper:
     """
@@ -281,6 +283,9 @@ class RuleParser(Parser):
             if not isinstance(node_constraints, (list, tuple, set)):
                 constraints[node_value] = (node_constraints,)
         return constraints
+
+    def __or__(self, other):
+        return Rule(self, other)
 
 
 class PymLizParser(Parser):
