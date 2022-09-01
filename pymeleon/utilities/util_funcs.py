@@ -115,17 +115,26 @@ def test_rules(dsl: DSL) -> None:
         graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
     num_originals = len(dsl.in_types)
     while True:
-        save_graph(graph, print=True, show_constraints=True)
+        # save_graph(graph, print=True, show_constraints=True)
         while True:
             rule: Rule = random.choice(rules)
             transform_dicts = tuple(rule_search(rule, graph))
             if transform_dicts:
                 transform_dict = random.choice(transform_dicts)
                 break
-        print(rule)
-        num_originals_curr = 0
+        # print(rule)
         graph = rule.apply(graph, transform_dict)
+        num_originals_curr = 0
         for node in graph.nodes:
+            min_order = float("inf")
+            if node != "root_node":
+                for suc_node in graph.successors(node):
+                    min_order = min(graph[node][suc_node]["order"], min_order)
+                if min_order > 1 and min_order != float("inf"):
+                    print("ERROR")
+                    print(rule)
+                    save_graph(graph, print=True, show_constraints=True)
+                    raise RuntimeError("min_order > 1 found")
             if graph.out_degree(node) == 0 and node.value != "ORIGINAL":
                 raise RuntimeError("A leaf was generated")
             if node != "root_node" and node.value == "ORIGINAL":
