@@ -1,6 +1,6 @@
 from pymeleon.dsl.rule import Rule
 from pymeleon.viewer.viewer import Viewer
-from pymeleon.object import PymLiz
+from pymeleon.object.object import PymLiz
 from pymeleon.dsl.parser import PymLizParser
 from pymeleon.dsl.dsl import DSL
 from random import choice
