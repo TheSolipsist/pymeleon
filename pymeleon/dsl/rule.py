@@ -137,9 +137,23 @@ class Rule:
                 self._cur_graph.add_edge("root_node", node_copy, order=-1)
             self._add_output_graph_rec(node, node_copy)
 
+    def _get_cur_node_dict_edges(self, cur_node_dict: dict, graph: DiGraph, reverse_transform_dict: dict):
+        """
+        Returns any edges between nodes that are keys in the cur_node_dict.
+        Should be called after having removed the edges that make up the input graph from the graph to which the rule
+        is currently being applied.
+        
+        -- Arguments --
+            cur_node_dict(dict[Node, Node]): Dictionary mapping the nodes in the graph that match the input graph's 
+                nodes to their corresponding nodes in the graph that match the output nodes. It is the self.node_dict 
+                for the specific input and output graphs contained in the full graph
+        """
+        pass
+                
+        
     # ------- PRIVATE METHODS END ------- #
 
-    def apply(self, graph, transform_dict, deepcopy_graph=True):
+    def apply(self, graph, transform_dict, deepcopy_graph=True) -> DiGraph:
         """
         Applies the rule to the specified graph
 
@@ -164,7 +178,7 @@ class Rule:
             if graph.has_edge("root_node", transform_dict[in_node]):
                 graph.remove_edge("root_node", transform_dict[in_node])
             self._remove_mapped_edges_rec(in_node)
-        self._add_output_graph()
+        self._add_output_graph() 
         # cur_node_dict is the equivalent of node_dict for the specific input and output graphs of the graph to transform
         cur_node_dict = self._cur_node_dict
 
@@ -184,8 +198,12 @@ class Rule:
                     for i, node in enumerate(out_nodes):
                         graph.add_edge(pre_node, node, order=cur_order + i + 1)
             for suc_node in graph.successors(graph_node):
-                if suc_node not in reverse_transform_dict:
-                    for node in cur_node_dict[graph_node]:
+                if suc_node in cur_node_dict:
+                    for node in out_nodes:
+                        for suc_node_out in cur_node_dict[suc_node]:
+                            graph.add_edge(node, suc_node_out, order=graph.get_edge_data(graph_node, suc_node)["order"])
+                else:
+                    for node in out_nodes:
                         graph.add_edge(node, suc_node, order=graph.get_edge_data(graph_node, suc_node)["order"])
         for graph_node in reverse_transform_dict:
             # Fix order for any sibling nodes and then remove the node
