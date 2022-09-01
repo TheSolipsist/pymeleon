@@ -1,6 +1,7 @@
 import random
 from time import perf_counter
 import functools
+from typing import Iterable
 import networkx as nx
 from networkx import DiGraph
 from matplotlib import pyplot as plt
@@ -11,6 +12,7 @@ from pymeleon.dsl.rule_search import RuleSearch
 from pymeleon.neural_net.neural_net import NeuralNet, NeuralNetError
 from pymeleon.neural_net.metrics import Metrics
 import torch
+from tqdm import tqdm
 
 
 def timer(func):
@@ -107,14 +109,14 @@ def _plot_results(metrics_epoch: dict[str, dict[str, torch.Tensor]], i: int = No
         fig.savefig(f"results/{metric_str}_{i}.png", dpi=150)
         plt.close(fig)
     
-def test_rules(dsl: DSL) -> None:
+def test_rules(dsl: DSL, n_tests=10000) -> None:
     rule_search = RuleSearch()
     rules = dsl.rules
     graph = DiGraph()
     for type in dsl.in_types:
         graph.add_edge("root_node", Node("ORIGINAL", constraints=set((type,))), order=-1)
     num_originals = len(dsl.in_types)
-    while True:
+    for _ in tqdm(range(n_tests)):
         # save_graph(graph, print=True, show_constraints=True)
         while True:
             rule: Rule = random.choice(rules)
@@ -126,20 +128,47 @@ def test_rules(dsl: DSL) -> None:
         graph = rule.apply(graph, transform_dict)
         num_originals_curr = 0
         for node in graph.nodes:
-            min_order = float("inf")
             if node != "root_node":
-                for suc_node in graph.successors(node):
-                    min_order = min(graph[node][suc_node]["order"], min_order)
-                if min_order > 1 and min_order != float("inf"):
-                    print("ERROR")
-                    print(rule)
-                    save_graph(graph, print=True, show_constraints=True)
-                    raise RuntimeError("min_order > 1 found")
+                if graph.out_degree(node) > 0:
+                    orders = []
+                    for suc_node in graph.successors(node):
+                        orders.append(graph[node][suc_node]["order"])
+                    if len(set(orders)) != len(orders):
+                        print(rule)
+                        raise RuntimeError("repeating orders found")
+                    max_order = max(orders)
+                    if sum(orders) != max_order * (max_order + 1) / 2:
+                        print(rule)
+                        raise RuntimeError("non-consecutive orders found")
+                if graph.in_degree(node) == 0:
+                    raise RuntimeError("root_node was bypassed")
             if graph.out_degree(node) == 0 and node.value != "ORIGINAL":
-                raise RuntimeError("A leaf was generated")
+                print(rule)
+                raise RuntimeError("a leaf was generated")
             if node != "root_node" and node.value == "ORIGINAL":
                 num_originals_curr += 1
         if num_originals != num_originals_curr:
             num_originals = num_originals_curr
-            raise RuntimeError("ORIGINAL node created")
-                
+            print(rule)
+            raise RuntimeError("'ORIGINAL' node created")
+
+class VerboseIter:
+    """
+    Class transforming an iterable into an object that also prints its progress while iterating
+    """
+    def __init__(self, iterable: Iterable, NUM_BARS=20):
+        self.iterable = iter(iterable)
+        self.n_iter = len(self.iterable)
+        self.n_iter_done = 0
+        self.NUM_BARS = NUM_BARS
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        num_bars_done = round((self.n_iter_done / self.n_iter) * self.NUM_BARS)
+        percentage_done = f"{((self.n_iter_done / self.n_iter) * 100):.2f}%"
+        print(f"\rProgress: |{chr(9608) * num_bars_done}{' ' * (self.NUM_BARS - num_bars_done)}| {percentage_done}")
+        self.n_iter_done += 1
+        return next(self.iterable)
+        
