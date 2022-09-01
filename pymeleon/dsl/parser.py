@@ -224,7 +224,7 @@ def generate_graph_simple(args):
     graph = nx.DiGraph()
     graph.add_node("root_node")
     for i, item in enumerate(args):
-        graph.add_edge("root_node", Node(item), order=i + 1)
+        graph.add_edge("root_node", Node(item), order=-1)
     return graph
 
 
