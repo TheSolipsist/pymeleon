@@ -202,8 +202,12 @@ class TrainingGenerationRandom(TrainingGeneration):
             list[tuple[DiGraph]]: The training data, containing 4-tuples of DiGraphs (graph_before, graph_after, graph_negative, graph_final)
         """
         rule_search = RuleSearch()
-        data = []   # The training data (each record is a list of 3 DiGraphs: the graph before the application of the Rule,
-                    # the graph after the application of the Rule, and the graph after the application of multiple Rules
+        data = []   # The training data, in which each record is a list of 4 DiGraphs: 
+                    # graph_before:   the graph before the application of the Rule,
+                    # graph_after:    the graph after the application of the Rule, 
+                    # graph_negative: the graph after the application of a different Rule, 
+                    # graph_final:    the graph after the application of multiple Rules
+                    
         initial_graph_list = generate_initial_graph_list(dsl.in_types, self.n_items)
         total_nodes = sum(graph.number_of_nodes() for graph in initial_graph_list)
         examined_nodes = 0
