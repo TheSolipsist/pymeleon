@@ -1,8 +1,6 @@
 import pymeleon as pym
 import pygrank as pg
 import networkx as nx
-import numpy as np
-from time import perf_counter as pc
 
 def list2dict(x: list) -> dict:
     return {v: 1 for v in x}
@@ -58,6 +56,6 @@ def ex_4(signal: pg.GraphSignal, str_obj: str):
 
 def ex_5(signal: pg.GraphSignal, str_obj1: str, str_obj2: str):
     """
-    Apply signal2graph, str2list for each str, concat for the 2 lists, list2dict and use these to get pg.to_signal
+    Apply signal2graph, str2list each str, concat the 2 lists, list2dict and use these to get pg.to_signal
     """
     return viewer(signal, str_obj1, str_obj2) >> pym.parse({"a": "output_signal"})
