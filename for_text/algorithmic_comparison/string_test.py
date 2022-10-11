@@ -1,7 +1,13 @@
 import pymeleon as pym
 
-def add_prefix(x: str) -> str:
-    return f"banana_{x}"
+def prefix_check(x) -> bool:
+    return isinstance(x, str) and x == "banana"
+
+def postfix_check(x) -> bool:
+    return isinstance(x, str) and x == "apple"
+    
+def add_prefix(x: str, y: str) -> str:
+    return f"{y}_{x}"
 
 def add_postfix(x: str) -> str:
     return f"{x}_apple"
@@ -13,10 +19,12 @@ def split_str(x: str) -> list:
     return [c for c in x]
 
 viewer = pym.DSL(
-    pym.Rule(pym.parse(str),
-             pym.parse("add_prefix(_)", {"add_prefix": "prefixed"})),
-    pym.Rule(pym.parse({"a": "prefixed"}),
-             pym.parse("add_postfix(a)", {"add_postfix": "postfixed"})),
+    pym.Predicate("prefix", prefix_check),
+    pym.Predicate("postfix", postfix_check),
+    pym.Rule(pym.parse({"a": str, "b": "prefix"}),
+             pym.parse("add_prefix(a, b)", {"add_prefix": "prefixed"})),
+    pym.Rule(pym.parse({"a": "prefixed", "b": "postfix"}),
+             pym.parse("add_postfix(a, b)", {"add_postfix": "postfixed"})),
     pym.Rule(pym.parse({"a": "postfixed", "b": "postfixed"}),
              pym.parse("combine_str(a, b)", {"combine_str": "combined"})),
     pym.Rule(pym.parse({"a": "combined"}),
@@ -27,41 +35,43 @@ viewer = pym.DSL(
                        hyperparams={"num_epochs": 10000}, 
                        device_str="cuda")
 
-def ex_1(x: str):
+def ex_1(a: str, b: str):
     """
     Apply prefix
     """
-    return viewer(x) >> pym.parse({"a": "prefixed"})
+    return viewer(a, b) >> pym.parse({"a": "prefixed"})
 
-def ex_2(x: str, y: str):
+def ex_2(a: str, b: str, c: str):
     """
     Apply 2 prefixes
     """
-    return viewer(x, y) >> pym.parse({"a": "prefixed", "b": "prefixed"})
+    return viewer(a, b, c) >> pym.parse({"a": "prefixed", "b": "prefixed"})
 
-def ex_3(x: str, y: str):
+def ex_3(a: str, b: str, c: str, d: str):
     """
     Apply 2 prefixes and 2 postfixes
     """
-    return viewer(x, y) >> pym.parse({"a": "postfixed", "b": "postfixed"})
+    return viewer(a, b, c, d) >> pym.parse({"a": "postfixed", "b": "postfixed"})
 
-def ex_4(x: str, y: str):
+def ex_4(a: str, b: str, c: str, d: str):
     """
     Apply 2 prefixes, 2 postfixes and combine
     """
-    return viewer(x, y) >> pym.parse({"a": "combined"})
+    return viewer(a, b, c, d) >> pym.parse({"a": "combined"})
 
-def ex_5(x: str, y: str):
+def ex_5(a: str, b: str, c: str, d: str):
     """
     Apply 2 prefixes, 2 postfixes, combine and split
     """
-    return viewer(x, y) >> pym.parse({"a": "split"})
+    return viewer(a, b, c, d) >> pym.parse({"a": "split"})
 
 x = "hello"
 y = "world"
-print(ex_1(x),
-      ex_2(x, y),
-      ex_3(x, y),
-      ex_4(x, y),
-      ex_5(x, y),
+prefix = "banana"
+postfix = "apple"
+print(ex_1(x, prefix),
+      ex_2(x, y, prefix),
+      ex_3(x, y, prefix, postfix),
+      ex_4(x, y, prefix, postfix),
+      ex_5(x, y, prefix, postfix),
       sep="\n===============================\n")
