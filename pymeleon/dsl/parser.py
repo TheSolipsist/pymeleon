@@ -333,15 +333,30 @@ def _get_constraints_name_dict(constraints: dict):
     return {node_name: tuple(map(_get_constraint_name, constraint_types)) 
             for node_name, constraint_types in constraints.items()}
     
+class CheckType:
+    def __init__(self, constraint_type):
+        self.constraint_type = constraint_type
+    
+    def __call__(self, x):
+        return isinstance(x, self.constraint_type)
+    
 def _get_constraints_func_dict(constraints: dict):
     """
     Given a constraints dict, returns a dict that maps any [k: str, constraint_types: tuple[str|type]] pair to 
     a [constraint_type_name: str, lambda x: isinstance(x, constraint_type)] pair
     """
-    return {_get_constraint_name(constraint_type): lambda x: isinstance(x, constraint_type)
-            for constraint_types in constraints.values()
-            for constraint_type in constraint_types
-            if isinstance(constraint_type, type)}
+    constraints_func_dict =  dict()
+    for constraint_types in constraints.values():
+        for constraint_type in constraint_types:
+            if isinstance(constraint_type, type):
+                constraint_name = _get_constraint_name(constraint_type)
+                # constraints_func_dict[constraint_name] = lambda x: isinstance(x, constraint_type)
+                constraints_func_dict[constraint_name] = CheckType(constraint_type)
+    return constraints_func_dict
+    # {_get_constraint_name(constraint_type): lambda x: isinstance(x, constraint_type)
+    #                           for constraint_types in constraints.values()
+    #                           for constraint_type in constraint_types
+    #                           if isinstance(constraint_type, type)}
     
     
 def parse(*args, constraints: dict = None) -> RuleParser:
