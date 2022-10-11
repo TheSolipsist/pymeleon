@@ -15,6 +15,6 @@ def autorule(method):
         raise Exception(f"autorule needs a return annotation or method {name(method)}")
 
     lhs = parse({arg: parameter.annotation for arg, parameter in signature.parameters.items()})
-    rhs = parse(f"{name(method)}({','.join(arg[0] for arg in signature.parameters)})",
+    rhs = parse(f"{name(method)}({','.join(arg for arg in signature.parameters)})",
                 {name(method): signature.return_annotation})
     return Rule(lhs, rhs, ext={name(method): method})
