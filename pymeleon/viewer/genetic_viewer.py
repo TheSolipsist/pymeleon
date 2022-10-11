@@ -152,6 +152,7 @@ class GeneticViewer(Viewer):
                 obj_list.sort(key=scores.__getitem__, reverse=True)
                 # for _obj in obj_list:
                 #     print(scores[_obj])
+                #     from pymeleon.utilities.util_funcs import save_graph
                 #     save_graph(_obj.get_graph(), print=True, show_constraints=True)
                 del obj_list[n_fittest:]
                 scores = {_obj: scores[_obj] for _obj in obj_list}
