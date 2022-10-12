@@ -8,6 +8,7 @@ from pymeleon.dsl.rule_search import RuleSearch
 from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 from networkx import DiGraph
 from pymeleon.neural_net.training_generation import get_top_nodes_graph
+from pymeleon.utilities.util_funcs import save_graph
 
 
 def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
@@ -41,9 +42,9 @@ def _check_graph_match(graph: DiGraph, target_graph: DiGraph) -> bool:
     """
     if graph.out_degree("root_node") != target_graph.out_degree("root_node"):
         return False
-    for root_node in graph.successors("root_node"):
+    for target_root_node in target_graph.successors("root_node"):
         found = False
-        for target_root_node in target_graph.successors("root_node"):
+        for root_node in graph.successors("root_node"):
             if _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
                 found = True
                 break
@@ -145,6 +146,10 @@ class GeneticViewer(Viewer):
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
+                    try:
+                        new_obj.run()
+                    except:
+                        save_graph(new_obj.get_graph())
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
                         print(f"\rTarget found{' '* 60}")
                         return new_obj.run()
@@ -152,7 +157,6 @@ class GeneticViewer(Viewer):
                 obj_list.sort(key=scores.__getitem__, reverse=True)
                 # for _obj in obj_list:
                 #     print(scores[_obj])
-                #     from pymeleon.utilities.util_funcs import save_graph
                 #     save_graph(_obj.get_graph(), print=True, show_constraints=True)
                 del obj_list[n_fittest:]
                 scores = {_obj: scores[_obj] for _obj in obj_list}
