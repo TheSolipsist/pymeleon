@@ -33,7 +33,7 @@ def timer(func):
     return wrapper
 
 
-def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = False, show_constraints = False):
+def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = True, show_constraints = True):
     """
     Saves the given graph in a png file, or prints it if print==True
     """
