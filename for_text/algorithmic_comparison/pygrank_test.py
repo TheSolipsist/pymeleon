@@ -2,7 +2,7 @@ import pymeleon as pym
 import pygrank as pg
 import networkx as nx
 
-def list2dict(x: list) -> dict:
+def tuple2dict(x: tuple) -> dict:
     return {v: 1 for v in x}
 
 def signal2graph(x: pg.GraphSignal) -> nx.Graph:
@@ -20,7 +20,7 @@ def list2tuple(x: list) -> tuple:
 viewer = pym.DSL(
     pym.autorule(list2tuple),
     pym.autorule(signal2graph),
-    pym.autorule(list2dict),
+    pym.autorule(tuple2dict),
     pym.autorule(str2list),
     pym.autorule(concat),
     pym.Rule(pym.parse({"graph": nx.Graph, "data": dict}),
