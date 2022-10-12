@@ -9,8 +9,8 @@ def postfix_check(x) -> bool:
 def add_prefix(x: str, y: str) -> str:
     return f"{y}_{x}"
 
-def add_postfix(x: str) -> str:
-    return f"{x}_apple"
+def add_postfix(x: str, y: str) -> str:
+    return f"{x}_{y}"
  
 def combine_str(x: str, y: str) -> str:
     return f"{x}_combined_{y}"
