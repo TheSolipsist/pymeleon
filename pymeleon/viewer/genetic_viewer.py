@@ -1,3 +1,4 @@
+from typing import get_args
 from pymeleon.dsl.rule import Rule
 from pymeleon.viewer.viewer import Viewer
 from pymeleon.object.object import PymLiz
@@ -9,7 +10,8 @@ from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
 from networkx import DiGraph, Graph
 from pymeleon.neural_net.training_generation import get_top_nodes_graph
 from pymeleon.utilities.util_funcs import save_graph
-
+from networkx.algorithms.bipartite.matching import maximum_matching
+import networkx as nx
 
 def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
     if not target_root_node.constraints.issubset(root_node.constraints):
@@ -34,16 +36,20 @@ def _find_unique_match(G: Graph, graph: DiGraph, target_graph: DiGraph):
     Given which root_nodes a target_root_node can match, check if all target_root_nodes can be matched
     to a unique root_node
     """
-    for root_node in graph.successors("root_node"):
-        G.remove_node(root_node)
-        num_nodes_matched = 0
-        for target_root_node in target_graph.successors("root_node"):
-            if target_root_node in G and G.degree(target_root_node) == 0:
-                G.remove_node(target_root_node)
-                num_nodes_matched += 1
-        if num_nodes_matched > 1:
-            return False
-    return True
+    try:
+        return len(maximum_matching(G)) == len(G)
+    except nx.AmbiguousSolution:
+        return False
+    # for root_node in graph.successors("root_node"):
+    #     G.remove_node(root_node)
+    #     num_nodes_matched = 0
+    #     for target_root_node in target_graph.successors("root_node"):
+    #         if target_root_node in G and G.degree(target_root_node) == 0:
+    #             G.remove_node(target_root_node)
+    #             num_nodes_matched += 1
+    #     if num_nodes_matched > 1:
+    #         return False
+    # return True
                 
 
 def _check_graph_match(graph: DiGraph, target_graph: DiGraph) -> bool:
@@ -148,7 +154,7 @@ class GeneticViewer(Viewer):
         n_fittest = self.n_fittest
         for i_iter in range(n_iter):
             obj_list = [obj.copy() for __ in range(n_fittest)]
-            scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
+            # scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
                 print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
@@ -158,7 +164,7 @@ class GeneticViewer(Viewer):
                     if not transform_dicts:
                         obj_copy = current_obj.copy()
                         obj_list.append(obj_copy)
-                        scores[obj_copy] = scores[current_obj]
+                        # scores[obj_copy] = scores[current_obj]
                         continue
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
@@ -170,15 +176,15 @@ class GeneticViewer(Viewer):
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
                         print(f"\rTarget found{' '* 60}")
                         return new_obj.run()
-                    scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
-                obj_list.sort(key=scores.__getitem__, reverse=True)
+                    # scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
+                # scores = {_obj: self.fitness[_obj] for _obj in obj_list}
+                obj_list.sort(key=lambda x: self.fitness(x.get_graph(), target_graph) - x.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter)), reverse=True)
                 # for _obj in obj_list:
-                #     print(scores[_obj])
+                #     print(self.fitness(_obj.get_graph(), target_graph))
                 #     save_graph(_obj.get_graph(), print=True, show_constraints=True)
                 del obj_list[n_fittest:]
-                scores = {_obj: scores[_obj] for _obj in obj_list}
             current_best_obj = obj_list[0]
-            current_best_score = scores[current_best_obj]
+            current_best_score = self.fitness(current_best_obj.get_graph(), target_graph)
             if current_best_score > max_score:
                 max_score = current_best_score
                 best_obj = current_best_obj
