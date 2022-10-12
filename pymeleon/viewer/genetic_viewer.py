@@ -6,7 +6,7 @@ from pymeleon.dsl.dsl import DSL
 from random import choice
 from pymeleon.dsl.rule_search import RuleSearch
 from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
-from networkx import DiGraph
+from networkx import DiGraph, Graph
 from pymeleon.neural_net.training_generation import get_top_nodes_graph
 from pymeleon.utilities.util_funcs import save_graph
 
@@ -29,6 +29,22 @@ def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Nod
             return False
     return True
 
+def _find_unique_match(G: Graph, graph: DiGraph, target_graph: DiGraph):
+    """
+    Given which root_nodes a target_root_node can match, check if all target_root_nodes can be matched
+    to a unique root_node
+    """
+    for root_node in graph.successors("root_node"):
+        G.remove_node(root_node)
+        num_nodes_matched = 0
+        for target_root_node in target_graph.successors("root_node"):
+            if target_root_node in G and G.degree(target_root_node) == 0:
+                G.remove_node(target_root_node)
+                num_nodes_matched += 1
+        if num_nodes_matched > 1:
+            return False
+    return True
+                
 
 def _check_graph_match(graph: DiGraph, target_graph: DiGraph) -> bool:
     """
@@ -42,15 +58,16 @@ def _check_graph_match(graph: DiGraph, target_graph: DiGraph) -> bool:
     """
     if graph.out_degree("root_node") != target_graph.out_degree("root_node"):
         return False
+    G = Graph()
     for target_root_node in target_graph.successors("root_node"):
-        found = False
+        G.add_node(target_root_node)
         for root_node in graph.successors("root_node"):
+            G.add_node(root_node)
             if _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
-                found = True
-                break
-        if not found:
+                G.add_edge(target_root_node, root_node)
+        if G.degree(target_root_node) == 0:
             return False
-    return True
+    return _find_unique_match(G, graph, target_graph)
     
 class GeneticViewer(Viewer):
     """
@@ -146,10 +163,10 @@ class GeneticViewer(Viewer):
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
-                    try:
-                        new_obj.run()
-                    except:
-                        save_graph(new_obj.get_graph())
+                    # try:
+                    #     new_obj.run()
+                    # except:
+                    #     save_graph(new_obj.get_graph())
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
                         print(f"\rTarget found{' '* 60}")
                         return new_obj.run()
