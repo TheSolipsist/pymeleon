@@ -160,9 +160,7 @@ class GeneticViewer(Viewer):
         n_fittest = self.n_fittest
         for i_iter in range(n_iter):
             obj_list = [obj.copy() for __ in range(n_fittest)]
-            # scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
-                # print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
                     current_obj = obj_list[i]
                     chosen_rule = choice(rules)
@@ -170,26 +168,15 @@ class GeneticViewer(Viewer):
                     if not transform_dicts:
                         obj_copy = current_obj.copy()
                         obj_list.append(obj_copy)
-                        # scores[obj_copy] = scores[current_obj]
                         continue
                     chosen_transform_dict = choice(transform_dicts)
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
-                    # try:
-                    #     new_obj.run()
-                    # except:
-                    #     save_graph(new_obj.get_graph())
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
-                        # print(f"\rTarget found{' '* 60}")
-                        return (new_obj.run(), i_iter + 1)
-                    # scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
-                # scores = {_obj: self.fitness[_obj] for _obj in obj_list}
+                        return new_obj.run()
                 obj_list.sort(
                     key=lambda x: self.fitness(x.get_graph(), target_graph) - x.get_graph().number_of_edges() ** 2 * (
                                 float(i_iter) / float(n_iter)), reverse=True)
-                # for _obj in obj_list:
-                #     print(self.fitness(_obj.get_graph(), target_graph))
-                #     save_graph(_obj.get_graph(), print=True, show_constraints=True)
                 del obj_list[n_fittest:]
             current_best_obj = obj_list[0]
             current_best_score = self.fitness(current_best_obj.get_graph(), target_graph)
