@@ -33,7 +33,7 @@ lang.add_rules(convert_to_nparray, dot_product, float_to_int)
 lang.add_types(constraint_types)
 # Or we could say DSL(rules=[convert_to_nparray, dot_product], types=constraint_types)
 
-viewer = GeneticViewer(lang, ext, hyperparams={"num_epochs": 200}, device_str="cuda", use_pretrained=True)
+viewer = GeneticViewer(ext=ext, dsl=lang, hyperparams={"num_epochs": 1000}, device_str="cuda", use_pretrained=True)
 obj = viewer.blob(list1, list2)
 target_out = RuleParser("a", constraints={"a": "int"})
 print(obj.view(target_out))

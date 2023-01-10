@@ -25,7 +25,7 @@ def get_top_nodes_graph(graph: DiGraph) -> DiGraph:
     return top_nodes_graph
 
 
-def generate_graph_from_constraint_types(constraint_types: tuple[str]):
+def generate_graph_from_constraint_types(constraint_types: set[str]):
     """
     Generates a graph that is composed of a tuple of constraint types
     """
@@ -36,7 +36,7 @@ def generate_graph_from_constraint_types(constraint_types: tuple[str]):
     return graph
 
 
-def generate_initial_graph_list(constraint_types: dict, n_items: int) -> list[DiGraph]:
+def generate_initial_graph_list(constraint_types: set, n_items: int) -> list[DiGraph]:
     """
     Generates the initial graph list
 
@@ -202,8 +202,12 @@ class TrainingGenerationRandom(TrainingGeneration):
             list[tuple[DiGraph]]: The training data, containing 4-tuples of DiGraphs (graph_before, graph_after, graph_negative, graph_final)
         """
         rule_search = RuleSearch()
-        data = []   # The training data (each record is a list of 3 DiGraphs: the graph before the application of the Rule,
-                    # the graph after the application of the Rule, and the graph after the application of multiple Rules
+        data = []   # The training data, in which each record is a list of 4 DiGraphs: 
+                    # graph_before:   the graph before the application of the Rule,
+                    # graph_after:    the graph after the application of the Rule, 
+                    # graph_negative: the graph after the application of a different Rule, 
+                    # graph_final:    the graph after the application of multiple Rules
+                    
         initial_graph_list = generate_initial_graph_list(dsl.in_types, self.n_items)
         total_nodes = sum(graph.number_of_nodes() for graph in initial_graph_list)
         examined_nodes = 0
