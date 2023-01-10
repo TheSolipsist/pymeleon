@@ -23,8 +23,13 @@ G = nx.Graph()
 G.add_edge("node_a", "node_b")
 
 # Each function measured once
-def ppr(*args):
+def ppr(*args):\
+    # graph, list, string, graphsignal
     if len(args) == 2:
+        if isinstance(args[0], str):
+            args[0] = [args[0]]
+        elif isinstance(args[1], str):
+            args[1] = [args[1]]
         if isinstance(args[0], pg.GraphSignal):
             args[0] = signal2graph(args[0])
         elif isinstance(args[1], pg.GraphSignal):
@@ -35,7 +40,6 @@ def ppr(*args):
         elif isinstance(args[1], nx.Graph):
             graph = args[1]
             data = args[0]
-            
         if isinstance(data, list):
             data = list2dict(data)
         elif not isinstance(data, dict):

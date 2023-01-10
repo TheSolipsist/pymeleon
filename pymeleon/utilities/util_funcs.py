@@ -21,7 +21,7 @@ def timer(func):
     
     Causes a function to return the tuple (return_value, total_time):
         return_value:   the function's return value
-        total_time:     the time it took for the function to execute
+        total_time:     the time it took for the function to execute in seconds
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):

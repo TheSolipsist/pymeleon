@@ -1,4 +1,6 @@
 import pymeleon as pym
+from pymeleon.utilities.util_funcs import timer
+from pymeleon.viewer.genetic_viewer import ViewerError
 
 def prefix_check(x) -> bool:
     return isinstance(x, str) and x == "banana"
@@ -30,48 +32,59 @@ viewer = pym.DSL(
     pym.Rule(pym.parse({"a": "combined"}),
              pym.parse("split_str(a)", {"split_str": "split"})),
     name="string_test"
-) >> pym.GeneticViewer(ext=[add_prefix, add_postfix, combine_str, split_str], 
+) >> pym.GeneticViewer(ext=[add_prefix, add_postfix, combine_str, split_str],
                        use_pretrained=True,
                        hyperparams={"num_epochs": 10000}, 
                        device_str="cuda")
 
+@timer
 def ex_1(a: str, b: str):
     """
     Apply prefix
     """
     return viewer(a, b) >> pym.parse({"a": "prefixed"})
 
+@timer
 def ex_2(a: str, b: str, c: str):
     """
     Apply 2 prefixes
     """
     return viewer(a, b, c) >> pym.parse({"a": "prefixed", "b": "prefixed"})
 
+@timer
 def ex_3(a: str, b: str, c: str, d: str):
     """
     Apply 2 prefixes and 2 postfixes
     """
     return viewer(a, b, c, d) >> pym.parse({"a": "postfixed", "b": "postfixed"})
 
+@timer
 def ex_4(a: str, b: str, c: str, d: str):
     """
     Apply 2 prefixes, 2 postfixes and combine
     """
     return viewer(a, b, c, d) >> pym.parse({"a": "combined"})
 
+@timer
 def ex_5(a: str, b: str, c: str, d: str):
     """
     Apply 2 prefixes, 2 postfixes, combine and split
     """
     return viewer(a, b, c, d) >> pym.parse({"a": "split"})
 
-x = "hello"
-y = "world"
-prefix = "banana"
-postfix = "apple"
-print(ex_1(x, prefix),
-      ex_2(x, y, prefix),
-      ex_3(x, y, prefix, postfix),
-      ex_4(x, y, prefix, postfix),
-      ex_5(x, y, prefix, postfix),
-      sep="\n===============================\n")
+def test_example(foo, *args):
+    try:
+        return foo(*args)
+    except ViewerError:
+        return False
+    
+def test():
+    x = "hello"
+    y = "world"
+    prefix = "banana"
+    postfix = "apple"
+    return (test_example(ex_1, x, prefix),
+            test_example(ex_2, x, y, prefix),
+            test_example(ex_3, x, y, prefix, postfix),
+            test_example(ex_4, x, y, prefix, postfix),
+            test_example(ex_5, x, y, prefix, postfix))

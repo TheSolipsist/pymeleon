@@ -1,4 +1,3 @@
-from typing import get_args
 from pymeleon.dsl.rule import Rule
 from pymeleon.viewer.viewer import Viewer
 from pymeleon.object.object import PymLiz
@@ -12,6 +11,10 @@ from pymeleon.neural_net.training_generation import get_top_nodes_graph
 from pymeleon.utilities.util_funcs import save_graph
 from networkx.algorithms.bipartite.matching import maximum_matching
 import networkx as nx
+
+class ViewerError(Exception):
+    pass
+
 
 def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
     if not target_root_node.constraints.issubset(root_node.constraints):
@@ -36,10 +39,7 @@ def _find_unique_match(G: Graph, graph: DiGraph, target_graph: DiGraph):
     Given which root_nodes a target_root_node can match, check if all target_root_nodes can be matched
     to a unique root_node
     """
-    try:
-        return len(maximum_matching(G)) == len(G)
-    except nx.AmbiguousSolution:
-        return False
+    return len(maximum_matching(G, top_nodes=target_graph.successors("root_node"))) == len(G)
     # for root_node in graph.successors("root_node"):
     #     G.remove_node(root_node)
     #     num_nodes_matched = 0
@@ -120,21 +120,23 @@ class GeneticViewer(Viewer):
 
     def add_dsl(self, dsl: DSL):
         self.dsl = dsl
-        if self.fitness_str == "neural_random":
-            self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
-                                                hyperparams=self.hyperparams, 
-                                                device_str=self.device_str,
-                                                training_generation="random", 
-                                                use_pretrained=self.use_pretrained,)
-        elif self.fitness_str == "neural_exhaustive":
-            self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
-                                                hyperparams=self.hyperparams, 
-                                                device_str=self.device_str, 
-                                                training_generation="exhaustive", 
-                                                use_pretrained=self.use_pretrained,)
-        elif self.fitness_str == "heuristic":
-            self.fitness_obj = FitnessHeuristic()
-        self.fitness = self.fitness_obj.fitness_score
+        # if self.fitness_str == "neural_random":
+        #     self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
+        #                                         hyperparams=self.hyperparams, 
+        #                                         device_str=self.device_str,
+        #                                         training_generation="random", 
+        #                                         use_pretrained=self.use_pretrained,)
+        # elif self.fitness_str == "neural_exhaustive":
+        #     self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
+        #                                         hyperparams=self.hyperparams, 
+        #                                         device_str=self.device_str, 
+        #                                         training_generation="exhaustive", 
+        #                                         use_pretrained=self.use_pretrained,)
+        # elif self.fitness_str == "heuristic":
+        #     self.fitness_obj = FitnessHeuristic()
+        # self.fitness = self.fitness_obj.fitness_score
+        from random import random
+        self.fitness = lambda x,y: random()
         
     def blob(self, *args):
         """
@@ -156,7 +158,7 @@ class GeneticViewer(Viewer):
             obj_list = [obj.copy() for __ in range(n_fittest)]
             # scores = {_obj: self.fitness(_obj.get_graph(), target_graph) for _obj in obj_list}
             for i_gen in range(self.n_gen):
-                print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
+                # print(f"\rRunning: GeneticViewer.view() - Iteration {i_iter + 1}, Generation {i_gen + 1}  ", end="")
                 for i in range(n_fittest):
                     current_obj = obj_list[i]
                     chosen_rule = choice(rules)
@@ -174,8 +176,8 @@ class GeneticViewer(Viewer):
                     # except:
                     #     save_graph(new_obj.get_graph())
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
-                        print(f"\rTarget found{' '* 60}")
-                        return new_obj.run()
+                        # print(f"\rTarget found{' '* 60}")
+                        return (new_obj.run(), i_iter + 1)
                     # scores[new_obj] = self.fitness(new_obj.get_graph(), target_graph) - new_obj.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter))
                 # scores = {_obj: self.fitness[_obj] for _obj in obj_list}
                 obj_list.sort(key=lambda x: self.fitness(x.get_graph(), target_graph) - x.get_graph().number_of_edges() ** 2 * (float(i_iter) / float(n_iter)), reverse=True)
@@ -188,8 +190,8 @@ class GeneticViewer(Viewer):
             if current_best_score > max_score:
                 max_score = current_best_score
                 best_obj = current_best_obj
-        print(f"\rTarget not found, returning closest object{' '* 60}")
-        return best_obj.run()
+        # print(f"\rTarget not found, returning closest object{' '* 60}")
+        raise ViewerError("Desired object could not be generated")
 
     def search(self, rule: Rule, obj: PymLiz):
         """

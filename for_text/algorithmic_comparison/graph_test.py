@@ -1,5 +1,7 @@
 import pymeleon as pym
 import networkx as nx
+from pymeleon.utilities.util_funcs import timer
+from pymeleon.viewer.genetic_viewer import ViewerError
 
 def dict2graph(x: dict) -> nx.Graph:
     G = nx.Graph()
@@ -24,43 +26,54 @@ viewer = pym.DSL(
     name="graph_test"
 ) >> pym.GeneticViewer(use_pretrained=True, hyperparams={"num_epochs": 2000}, device_str="cuda")
 
+@timer
 def ex_1(x: int, y: int):
     """
     Apply ints2list transformation
     """
     return viewer(x, y) >> pym.parse(list)
 
+@timer
 def ex_2(x: str, y: str):
     """
     Apply strs2list transformation
     """
     return viewer(x, y) >> pym.parse(list)
 
+@timer
 def ex_3(a: int, b: int, x: str, y: str):
     """
     Apply ints2list and strs2list transformations
     """
     return viewer(a, b, x, y) >> pym.parse({"a": list, "b": list})
 
+@timer
 def ex_4(a: int, b: int, x: str, y: str):
     """
     Apply ints2list, strs2list and lists2dict transformations
     """
     return viewer(a, b, x, y) >> pym.parse(dict)
 
+@timer
 def ex_5(a: int, b: int, x: str, y: str):
     """
     Apply ints2list, strs2list, lists2dict transformations and make the dict into a graph
     """
     return viewer(a, b, x, y) >> pym.parse(nx.Graph)
 
-a = 1
-b = 2
-c = "banana"
-d = "apple"
-print(ex_1(a, b),
-      ex_2(c, d),
-      ex_3(a, b, c, d),
-      ex_4(a, b, c, d),
-      ex_5(a, b, c, d),
-      sep="\n===============================\n")
+def test_example(foo, *args):
+    try:
+        return foo(*args)
+    except ViewerError:
+        return False
+    
+def test():
+    a = 1
+    b = 2
+    c = "banana"
+    d = "apple"
+    return (test_example(ex_1, a, b),
+            test_example(ex_2, c, d),
+            test_example(ex_3, a, b, c, d),
+            test_example(ex_4, a, b, c, d),
+            test_example(ex_5, a, b, c, d))

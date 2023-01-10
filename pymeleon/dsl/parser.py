@@ -311,7 +311,12 @@ class Predicate:
             raise ParsingError("Predicate's name must be a string")
         if not isinstance(func, Callable):
             raise ParsingError("Predicate's function must be a Callable")
+        self._name = name
+        self._func = func
         self.type = {name: func}
+    
+    def __call__(self, obj):
+        return self._func(obj)
 
 
 def _get_constraint_name(constraint: str | type) -> str:
