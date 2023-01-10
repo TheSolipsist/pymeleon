@@ -9,7 +9,8 @@ NOINPUT = lambda x: False
 
 def list2dict(x: list):
     return {v: 1 for v in x}
-    
+
+
 constraint_types = {"Graph": lambda x: isinstance(x, nx.Graph),
                     "GraphSignal": lambda x: isinstance(x, pg.GraphSignal),
                     "Dict": lambda x: isinstance(x, dict),
@@ -30,7 +31,8 @@ lang.add_rules(Rule(RuleParser("a", constraints={"a": "GraphSignal"}),
                )
 lang.add_types(constraint_types)
 
-viewer = GeneticViewer(lang, {"list2dict": list2dict, "pg": pg})
+viewer = GeneticViewer({"list2dict": list2dict, "pg": pg}, lang)
 obj = viewer.blob(G, x)
 target_out = RuleParser("a", constraints={"a": ("OUT", "GraphSignal")})
-print(obj.view(target_out))
+ret = obj.view(target_out)
+print(ret)

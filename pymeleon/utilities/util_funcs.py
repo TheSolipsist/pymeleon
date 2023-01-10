@@ -21,7 +21,7 @@ def timer(func):
     
     Causes a function to return the tuple (return_value, total_time):
         return_value:   the function's return value
-        total_time:     the time it took for the function to execute
+        total_time:     the time it took for the function to execute in seconds
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -33,7 +33,7 @@ def timer(func):
     return wrapper
 
 
-def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = False, show_constraints = False):
+def save_graph(graph: DiGraph, filename: str = "temp_graph.png", print: bool = True, show_constraints = True):
     """
     Saves the given graph in a png file, or prints it if print==True
     """
