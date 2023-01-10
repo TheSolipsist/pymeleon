@@ -1,7 +1,7 @@
 from pymeleon.dsl.rule import Rule
 from pymeleon.viewer.viewer import Viewer
 from pymeleon.object.object import PymLiz
-from pymeleon.dsl.parser import Node, PymLizParser, RuleParser
+from pymeleon.dsl.parser import Node, PymLizParser, RuleParser, parse
 from pymeleon.dsl.dsl import DSL
 from random import choice
 from pymeleon.dsl.rule_search import RuleSearch
@@ -11,6 +11,7 @@ from pymeleon.neural_net.training_generation import get_top_nodes_graph
 from pymeleon.utilities.util_funcs import save_graph
 from networkx.algorithms.bipartite.matching import maximum_matching
 import networkx as nx
+from typing import Any
 
 
 class ViewerError(Exception):
@@ -149,10 +150,12 @@ class GeneticViewer(Viewer):
         obj = PymLiz(self, PymLizParser(*args), constraint_types=self.dsl.types, ext=self.ext | self.dsl.ext)
         return obj
 
-    def view(self, obj: PymLiz, parser_obj: RuleParser):
+    def view(self, obj: PymLiz, parser_obj: Any):
         """
         Returns the object's output after having changed it according to the viewer's function
         """
+        if not isinstance(parser_obj, RuleParser):
+            parser_obj = parse(parser_obj)
         target_graph = parser_obj.graph
         rules = self.dsl.rules
         max_score = float("-inf")
