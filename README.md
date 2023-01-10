@@ -7,9 +7,8 @@ based on domain specific language (DSL) transformations.
 
 ## Features
 :rocket: Run code only once<br>
-:arrow_upper_right: DSL definition<br>
-:robot: Rule generation from type-hinted methods<br>
-:writing_hand: Type constraints<br>
+:robot: DSL rules from type-hinted methods<br>
+:writing_hand: Custom type constraints<br>
 
 ## Quickstart
 To use the library, lets start from a couple of
