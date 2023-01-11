@@ -120,23 +120,21 @@ class GeneticViewer(Viewer):
 
     def add_dsl(self, dsl: DSL):
         self.dsl = dsl
-        # if self.fitness_str == "neural_random":
-        #     self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
-        #                                         hyperparams=self.hyperparams, 
-        #                                         device_str=self.device_str,
-        #                                         training_generation="random", 
-        #                                         use_pretrained=self.use_pretrained,)
-        # elif self.fitness_str == "neural_exhaustive":
-        #     self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
-        #                                         hyperparams=self.hyperparams, 
-        #                                         device_str=self.device_str, 
-        #                                         training_generation="exhaustive", 
-        #                                         use_pretrained=self.use_pretrained,)
-        # elif self.fitness_str == "heuristic":
-        #     self.fitness_obj = FitnessHeuristic()
-        # self.fitness = self.fitness_obj.fitness_score
-        from random import random
-        self.fitness = lambda x,y: random()
+        if self.fitness_str == "neural_random":
+            self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
+                                                hyperparams=self.hyperparams, 
+                                                device_str=self.device_str,
+                                                training_generation="random", 
+                                                use_pretrained=self.use_pretrained,)
+        elif self.fitness_str == "neural_exhaustive":
+            self.fitness_obj = FitnessNeuralNet(dsl=dsl, 
+                                                hyperparams=self.hyperparams, 
+                                                device_str=self.device_str, 
+                                                training_generation="exhaustive", 
+                                                use_pretrained=self.use_pretrained,)
+        elif self.fitness_str == "heuristic":
+            self.fitness_obj = FitnessHeuristic()
+        self.fitness = self.fitness_obj.fitness_score
         
     def blob(self, *args):
         """
