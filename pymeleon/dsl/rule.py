@@ -4,8 +4,6 @@ Rule module
 from networkx import DiGraph
 from collections import defaultdict
 
-from pymeleon.dsl.parser import RuleParser
-
 
 class BadGraph(Exception):
     """
@@ -32,8 +30,8 @@ class Rule:
         apply(graph): Applies the rule to the specified graph
     """
     def __init__(self, 
-                 parser_obj_in: RuleParser, 
-                 parser_obj_out: RuleParser, 
+                 parser_obj_in,#: RuleParser,
+                 parser_obj_out,#: RuleParser,
                  other_node_dict=None, 
                  operator_dict=None,
                  ext=None) -> None:

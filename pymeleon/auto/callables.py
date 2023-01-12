@@ -18,3 +18,9 @@ def autorule(method):
     rhs = parse(f"{name(method)}({','.join(arg for arg in signature.parameters)})",
                 {name(method): signature.return_annotation})
     return Rule(lhs, rhs, ext={name(method): method})
+
+
+def tuple(*types):
+    if len(types) > 1:
+        return parse({f"_{i}": type for i, type in enumerate(types)})
+    return parse(types)

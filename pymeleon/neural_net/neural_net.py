@@ -171,7 +171,7 @@ class NeuralNet:
         "n_items": None, # Initialized to len(DSL.types) for each NeuralNet instance
         "lr": 0.0001,
         "prev_reg": 0.1,
-        "num_epochs": 200,
+        "num_epochs": 500,
         "batch_size": 2**16,
         "weight_decay": 1.e-4
     }
@@ -304,9 +304,11 @@ class NeuralNet:
         metrics_epoch = {dataset_str: {metric : torch.zeros(num_epochs, dtype=torch.float32, requires_grad=False, device=self.device)
                                        for metric in self.metric_funcs}
                          for dataset_str in dataloaders}
+        NUM_BARS = 20
         for epoch in range(num_epochs):
-            model.train()
-            print(f"\rEpoch: {epoch + 1}/{num_epochs}", end="")
+            num_bars_done = round((epoch / num_epochs) * NUM_BARS)
+            print(f"\rFitness training {num_bars_done * '■'}{(NUM_BARS - num_bars_done) * '-'}", end="")
+            #print(f"\rEpoch: {epoch + 1}/{num_epochs}", end="")
             for data_tensors in dataloaders["train"]:
                 optimizer.zero_grad()
                 loss = self.metric_funcs["loss"](data_tensors)

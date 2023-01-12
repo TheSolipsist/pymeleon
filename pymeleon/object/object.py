@@ -99,7 +99,10 @@ class PymLiz:
         result = []
         for node in connected_components:
             deparsed_component = self._deparse_component(node)
-            result.append(eval(deparsed_component, self._ext | {"__pym_get_obj": __pym_get_obj}))
+            try:
+                result.append(eval(deparsed_component, self._ext | {"__pym_get_obj": __pym_get_obj}))
+            except Exception as e:
+                raise Exception("Exception occurred during the execution of", deparsed_component)
         if len(result) == 1:
             return result[0]
         else:

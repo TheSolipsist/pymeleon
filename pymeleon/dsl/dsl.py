@@ -62,7 +62,11 @@ class DSL:
             else:
                 raise DSLError("The DSL constructor receives a str (the DSL's name) as an optional first argument \
                                 and every other argument must be a Predicate or a Rule")
-        
+
+    def set_name(self, name):
+        self.name = name
+        return self
+
     def _add_rule(self, rule: Rule):
         self.rules.append(rule)
         if rule.ext is not None:

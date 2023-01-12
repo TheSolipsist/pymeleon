@@ -1,6 +1,8 @@
 from typing import Callable
 import networkx as nx
 
+from pymeleon.dsl.rule import Rule
+
 
 class Wrapper:
     """
@@ -282,6 +284,9 @@ class RuleParser(Parser):
                 constraints[node_value] = (node_constraints,)
         return constraints
 
+    def __or__(self, other):
+        return Rule(self, other)
+
 
 class PymLizParser(Parser):
     """
@@ -384,7 +389,7 @@ def parse(*args, constraints: dict = None) -> RuleParser:
     for k, v in constraints.items():
         if not isinstance(v, list | tuple | set):
             constraints[k] = (v,)
-    if not all(map(lambda x: isinstance(x[0], str) and all(map(lambda y: isinstance(y, str | type), x[1])), 
+    if not all(map(lambda x: isinstance(x[0], str) and all(map(lambda y: isinstance(y, str | type), x[1])),
                     constraints.items())):
         raise ParsingError("parse() constraints must be a dict['str', 'str'|'type']")
     if (not args) and constraints:
@@ -399,8 +404,7 @@ def parse(*args, constraints: dict = None) -> RuleParser:
                               constraints_func_dict={constraint_name: lambda x: isinstance(x, args[0])})
         raise ParsingError("When providing parse() with a single argument, it must be a type or a constraints dict")
     if (not all(map(lambda x: isinstance(x, str), args))):
-        raise ParsingError("parse() takes an arbitrary number of str arguments and an optional dict mapping any \
-                            of them to a type or str")
+        raise ParsingError("parse() takes an arbitrary number of str arguments and an optional dict mapping any of them to a type or str")
     return RuleParser(*args, 
                       constraints=_get_constraints_name_dict(constraints),
                       constraints_func_dict=_get_constraints_func_dict(constraints))
