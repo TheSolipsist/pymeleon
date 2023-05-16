@@ -6,11 +6,9 @@ from pymeleon.dsl.dsl import DSL
 from random import choice
 from pymeleon.dsl.rule_search import RuleSearch
 from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
-from networkx import DiGraph, Graph
+import networkx as nx
 from pymeleon.neural_net.training_generation import get_top_nodes_graph
 from pymeleon.utilities.util_funcs import save_graph
-from networkx.algorithms.bipartite.matching import maximum_matching
-import networkx as nx
 from typing import Any
 
 
@@ -18,7 +16,30 @@ class ViewerError(Exception):
     pass
 
 
-def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Node, target_root_node: Node) -> bool:
+def _find_possible_matches(graph: nx.DiGraph, target_graph: nx.DiGraph) -> nx.Graph:
+    """
+    Finds possible matches between the roots of graph and target_graph.
+
+    Args:
+        graph (nx.DiGraph): The graph currently being examined.
+        target_graph (nx.DiGraph): The final graph which we are trying to reach.
+
+    Returns:
+        nx.Graph: Matching between nodes that match in graph and target_graph.
+    """
+    G = nx.Graph()
+    for target_root_node in target_graph.successors("root_node"):
+        G.add_node(target_root_node)
+        for root_node in graph.successors("root_node"):
+            G.add_node(root_node)
+            if _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
+                G.add_edge(target_root_node, root_node)
+        if G.degree(target_root_node) == 0:
+            return False
+    return G
+
+
+def _check_graph_match_rec(graph: nx.DiGraph, target_graph: nx.DiGraph, root_node: Node, target_root_node: Node) -> bool:
     if not target_root_node.constraints.issubset(root_node.constraints):
         return False
     # Successor nodes are ordered by their "order" edge attribute in relation to their root node
@@ -37,48 +58,24 @@ def _check_graph_match_rec(graph: DiGraph, target_graph: DiGraph, root_node: Nod
     return True
 
 
-def _find_unique_match(G: Graph, graph: DiGraph, target_graph: DiGraph):
+def _check_graph_match(graph: nx.DiGraph, target_graph: nx.DiGraph) -> bool:
     """
-    Given which root_nodes a target_root_node can match, check if all target_root_nodes can be matched
-    to a unique root_node
-    """
-    return len(maximum_matching(G, top_nodes=target_graph.successors("root_node"))) == len(G)
-    # for root_node in graph.successors("root_node"):
-    #     G.remove_node(root_node)
-    #     num_nodes_matched = 0
-    #     for target_root_node in target_graph.successors("root_node"):
-    #         if target_root_node in G and G.degree(target_root_node) == 0:
-    #             G.remove_node(target_root_node)
-    #             num_nodes_matched += 1
-    #     if num_nodes_matched > 1:
-    #         return False
-    # return True
-
-
-def _check_graph_match(graph: DiGraph, target_graph: DiGraph) -> bool:
-    """
-    Checks if ``graph`` "contains" ``target_graph``, meaning that ``target_graph`` and ``graph`` are isomorphic and
+    Checks if graph "contains" target_graph, meaning that target_graph and graph are isomorphic and
     each node in target_graph has constraints that are a subset of those in graph.
-    ``graph``'s nodes may have children that target_graph's nodes don't have, meaning that ``target_graph`` can be a
-    top node representation of ``graph``
+    graph's nodes may have children that target_graph's nodes don't have, meaning that target_graph can be a
+    top node representation of graph
 
     Returns:
-        bool: Specifies whether ``graph`` contains ``target_graph``
+        bool: Specifies whether graph contains target_graph
     """
     if graph.out_degree("root_node") != target_graph.out_degree("root_node"):
         return False
-    G = Graph()
-    for target_root_node in target_graph.successors("root_node"):
-        G.add_node(target_root_node)
-        for root_node in graph.successors("root_node"):
-            G.add_node(root_node)
-            if _check_graph_match_rec(graph, target_graph, root_node, target_root_node):
-                G.add_edge(target_root_node, root_node)
-        if G.degree(target_root_node) == 0:
-            return False
-    return _find_unique_match(G, graph, target_graph)
-
-
+    G = _find_possible_matches(graph, target_graph)
+    if not G:
+        return False
+    maximum_match = nx.bipartite.maximum_matching(G, top_nodes=graph.successors("root_node"))
+    return len(maximum_match) == len(G)
+    
 class GeneticViewer(Viewer):
     """
     Genetic viewer class, implementing genetic selection and application of Rules
@@ -99,9 +96,9 @@ class GeneticViewer(Viewer):
     def __init__(self,
                  ext: set | list | dict = None,
                  dsl: DSL = None,
-                 n_iter: int = 100,
-                 n_gen: int = 20,
-                 n_fittest: int = 30,
+                 n_iter: int = 20,
+                 n_gen: int = 15,
+                 n_fittest: int = 20,
                  fitness: str = "neural_random",
                  device_str: str = "cpu",
                  use_pretrained: bool = True,
@@ -139,6 +136,8 @@ class GeneticViewer(Viewer):
                                                 use_pretrained=self.use_pretrained,)
         elif self.fitness_str == "heuristic":
             self.fitness_obj = FitnessHeuristic()
+        else:
+            raise ViewerError(f"Unsupported genetic viewer fitness mode: '{self.fitness_str}'. Supported modes: ('neural_random', 'neural_exhaustive', 'heuristic')")
         self.fitness = self.fitness_obj.fitness_score
         
     def blob(self, *args):
@@ -156,7 +155,6 @@ class GeneticViewer(Viewer):
             parser_obj = parse(parser_obj)
         target_graph = parser_obj.graph
         rules = self.dsl.rules
-        max_score = float("-inf")
         n_iter = self.n_iter
         n_fittest = self.n_fittest
         for i_iter in range(n_iter):
@@ -174,17 +172,10 @@ class GeneticViewer(Viewer):
                     new_obj = current_obj.apply(chosen_rule, chosen_transform_dict)
                     obj_list.append(new_obj)
                     if _check_graph_match(get_top_nodes_graph(new_obj.get_graph()), get_top_nodes_graph(target_graph)):
-                        return new_obj.run()
+                        return (new_obj.run(), i_iter + 1)
                 obj_list.sort(
-                    key=lambda x: self.fitness(x.get_graph(), target_graph) - x.get_graph().number_of_edges() ** 2 * (
-                                float(i_iter) / float(n_iter)), reverse=True)
+                    key=lambda x: self.fitness(x.get_graph(), target_graph), reverse=True)
                 del obj_list[n_fittest:]
-            current_best_obj = obj_list[0]
-            current_best_score = self.fitness(current_best_obj.get_graph(), target_graph)
-            if current_best_score > max_score:
-                max_score = current_best_score
-                best_obj = current_best_obj
-        # print(f"\rTarget not found, returning closest object{' '* 60}")
         raise ViewerError("Desired object could not be generated")
 
     def search(self, rule: Rule, obj: PymLiz):

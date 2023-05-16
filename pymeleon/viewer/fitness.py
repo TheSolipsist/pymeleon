@@ -1,8 +1,8 @@
 """
 Fitness module for the genetic viewer
 """
-
-import math
+import networkx as nx
+import numpy as np
 # pymeleon modules
 from pymeleon.dsl.dsl import DSL
 from pymeleon.neural_net.neural_net import NeuralNet, NeuralNetError
@@ -12,11 +12,10 @@ from networkx import DiGraph
 
 class Fitness:
     """
-    ### Abstract fitness class for use with the GeneticViewer
+    Abstract fitness class for use with the GeneticViewer
 
-    #### Methods:
-        ``fitness_score(graph_before, graph_after, graph_final)``: Returns a fitness score (0-1) for a \
-                (graph_before, graph_after, graph_final) sequence
+    Methods:
+        fitness_score(graph, target_graph): Returns a float (0-1) assessing how close graph is to target_graph
     """
     def __init__(self, *args):
         pass
@@ -40,17 +39,23 @@ class RecursionObject:
     
 class FitnessHeuristic(Fitness):
     """
-    ### Heuristic fitness class for use with the GeneticViewer
+    Heuristic fitness class for use with the GeneticViewer
 
-    #### Methods:
-        ``fitness_score(graph_before, graph_after, graph_final)``: Returns a fitness score (0-1) for a \
-                (graph_before, graph_after, graph_final) sequence using a heuristic algorithm
+    Methods:
+        fitness_score(graph, targt_graph): Returns a fitness score (0-1)
     """
-    def __init__(self):
-        pass
+    def __init__(self, distr_std_prc: float = 0.02):
+        """
+        Heuristic fitness class for use with the GeneticViewer 
+
+        Args:
+            distr_std_prc (float, 0-1): The fraction of the fitness score to be the normal distribution's standard
+                deviation, when calculating the noise to add to the fitness score. Defaults to 0.02.
+        """
+        self.distr_std_prc = distr_std_prc
         
     def _calculate_target_penalty(self, target_graph):
-        return math.log(sum((target_graph.in_degree(node) ** 2 for node in target_graph)))
+        return np.log(sum((target_graph.in_degree(node) ** 2 for node in target_graph)))
 
     def _check_graph_match_rec(self, wrapper_obj: RecursionObject, root_node, target_root_node):
         graph = wrapper_obj.graph
@@ -67,7 +72,7 @@ class FitnessHeuristic(Fitness):
             return False
         for suc_node, target_suc_node in zip(suc_nodes, target_suc_nodes):
             if (not target_suc_node.constraints.issubset(suc_node.constraints) or
-                    not self._check_graph_match_rec(wrapper_obj, suc_node, target_suc_node)):
+                not self._check_graph_match_rec(wrapper_obj, suc_node, target_suc_node)):
                 return False
         return True
 
@@ -77,49 +82,63 @@ class FitnessHeuristic(Fitness):
         score -= penalty * self.penalty_coefficient
         return score
     
-    def fitness_score(self, graph, target_graph, target_penalty):
+    def _find_possible_matches(self, graph: nx.DiGraph, target_graph: nx.DiGraph) -> nx.Graph:
         """
-        Fitness function for the genetic algorithm
-        
-        Checks if the desired graph structure is found in each of the components of the graph. The score starts as
-        1 if at least 1 component follows the desired graph structure (otherwise 0), gets divided by the number
-        of connected components and is penalized by the total number of incoming edges squared for each node (times
-        a parameter)
+        Finds possible matches between the roots of graph and target_graph.
+
+        Args:
+            graph (nx.DiGraph): The graph currently being examined.
+            target_graph (nx.DiGraph): The final graph which we are trying to reach.
+
+        Returns:
+            nx.Graph: Matching between nodes that match in graph and target_graph.
         """
-        wrapper_obj = RecursionObject()
-        wrapper_obj.graph = graph
-        wrapper_obj.target_graph = target_graph
-        score = 0
-        root_successors = tuple(graph.successors("root_node"))
-        target_root_successor = next(target_graph.successors("root_node"))
-        for node in root_successors:
-            if self._check_graph_match_rec(wrapper_obj, node, target_root_successor):
-                score = 1
-                break
-        score = self._calculate_regularized_score(graph, score, len(root_successors), target_penalty)
-        return score
+        G = nx.Graph()
+        for target_root_node in target_graph.successors("root_node"):
+            G.add_node(target_root_node)
+            for root_node in graph.successors("root_node"):
+                G.add_node(root_node)
+                if target_root_node.constraints.issubset(root_node.constraints):
+                    G.add_edge(target_root_node, root_node)
+        return G
     
+    def fitness_score(self, graph: nx.DiGraph, target_graph: nx.DiGraph) -> float:
+        """
+        Heuristic fitness function for the genetic algorithm
+        
+        Arguments:
+            graph (DiGraph): The graph currently being examined
+            target_graph (DiGraph): The final graph which we are trying to reach
+
+        Returns:
+            float: Assesses how close graph is to target_graph. Calculated by counting the number of roots
+                in graph whose constraints are a superset of the roots' constraints in target_graph. If target_graph has
+                more roots than graph, the result is normalized accordingly.
+        """
+        G = self._find_possible_matches(graph, target_graph)
+        matched_nodes = len(nx.bipartite.maximum_matching(G, top_nodes=graph.successors("root_node"))) // 2
+        score = matched_nodes / max(graph.out_degree("root_node"), target_graph.out_degree("root_node"))
+        score = np.random.normal(score, self.distr_std_prc)
+        return score
 
 class FitnessNeuralNet(Fitness):
     """
-    ### Neural net fitness class for use with the GeneticViewer
+    Neural net fitness class for use with the GeneticViewer
 
-    #### Parameters
-        ``DSL``: DSL to be used
-        ``n_gen``: Number of consecutive rules to be applied to the initial graphs when generating
+    Parameters
+        DSL: DSL to be used
+        n_gen: Number of consecutive rules to be applied to the initial graphs when generating
             the training data
-        ``n_items``: Maximum number of items to create initial graphs from when generating the training data
-        ``lr``: Learning rate
-        ``num_epochs``: Number of epochs to iterate through while training the network
-        ``batch_size``: The batch size to use while iterating through the training and testing data
-        ``num_classes``: The number of labels for each data instance
-        ``device_str``: The name of the device on which to train the model and make any predictions
-        ``training_generation_class``: The class to use for training example generation
+        n_items: Maximum number of items to create initial graphs from when generating the training data
+        lr: Learning rate
+        num_epochs: Number of epochs to iterate through while training the network
+        batch_size: The batch size to use while iterating through the training and testing data
+        num_classes: The number of labels for each data instance
+        device_str: The name of the device on which to train the model and make any predictions
+        training_generation_class: The class to use for training example generation
         
-    #### Methods:
-        ``fitness_score(graph, target_graph)``: Returns a fitness score (0-1) for a (graph_before, graph_after, \
-                graph_final) sequence using the neural network's predictions, in which graph_before is \
-                ``initial_graph``, graph_after is ``graph`` and graph_final is ``target_graph``
+    Methods:
+        fitness_score(graph, target_graph): Returns a fitness score (0-1) using the neural network's predictions
     """
     def __init__(self,
                  dsl: DSL,
@@ -137,14 +156,14 @@ class FitnessNeuralNet(Fitness):
     
     def fitness_score(self, graph: DiGraph, target_graph: DiGraph) -> float:
         """
-        ### Returns the fitness score of the current graph
+        Returns the fitness score of the current graph
 
-        #### Arguments:
-            ``graph`` (DiGraph): The graph currently being examined
-            ``target_graph`` (DiGraph): The final graph which we are trying to reach
+        Arguments:
+            graph (DiGraph): The graph currently being examined
+            target_graph (DiGraph): The final graph which we are trying to reach
 
-        #### Returns:
-            ``float``: Prediction (0-1) assessing how close ``graph`` is to ``target_graph``
+        Returns:
+            float: (0-1) value returned by the neural network, assessing how close graph is to target_graph 
         """
         try:
             return self.model.predict(graph, target_graph)
