@@ -5,7 +5,7 @@ from pymeleon.dsl.parser import Node, PymLizParser, RuleParser, parse
 from pymeleon.dsl.dsl import DSL
 from random import choice
 from pymeleon.dsl.rule_search import RuleSearch
-from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet
+from pymeleon.viewer.fitness import FitnessHeuristic, FitnessNeuralNet, FitnessRandom
 import networkx as nx
 from pymeleon.neural_net.training_generation import get_top_nodes_graph
 from pymeleon.utilities.util_funcs import save_graph
@@ -136,6 +136,8 @@ class GeneticViewer(Viewer):
                                                 use_pretrained=self.use_pretrained,)
         elif self.fitness_str == "heuristic":
             self.fitness_obj = FitnessHeuristic()
+        elif self.fitness_str == "random":
+            self.fitness_obj = FitnessRandom()
         else:
             raise ViewerError(f"Unsupported genetic viewer fitness mode: '{self.fitness_str}'. Supported modes: ('neural_random', 'neural_exhaustive', 'heuristic')")
         self.fitness = self.fitness_obj.fitness_score

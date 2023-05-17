@@ -169,3 +169,26 @@ class FitnessNeuralNet(Fitness):
             return self.model.predict(graph, target_graph)
         except NeuralNetError:
             return -1
+
+class FitnessRandom(Fitness):
+    """
+    Random fitness class for use with the GeneticViewer
+
+    Methods:
+        fitness_score(graph, target_graph): Returns a random fitness score (0-1)
+    """
+    def __init__(self) -> None:
+        pass
+    
+    def fitness_score(self, graph: DiGraph, target_graph: DiGraph) -> float:
+        """
+        Returns a random fitness score for the current graph
+
+        Arguments:
+            graph (DiGraph): The graph currently being examined
+            target_graph (DiGraph): The final graph which we are trying to reach
+
+        Returns:
+            float: random value in the [0-1) interval
+        """
+        return np.random.random()
